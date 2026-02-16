@@ -1,0 +1,224 @@
+import {
+    WebSocketGateway,
+    WebSocketServer,
+    SubscribeMessage,
+    OnGatewayConnection,
+    OnGatewayDisconnect,
+    MessageBody,
+    ConnectedSocket,
+} from '@nestjs/websockets';
+import { Logger } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { Server, Socket } from 'socket.io';
+import { ChatService } from './chat.service';
+import { NotificationsService } from '../notifications/notifications.service';
+
+interface SocketUser {
+    userId: string;
+    email: string;
+    role: string;
+    departmentId: string | null;
+}
+
+@WebSocketGateway({ cors: { origin: true, credentials: true } })
+export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+    @WebSocketServer()
+    server: Server;
+
+    private readonly logger = new Logger(ChatGateway.name);
+
+    // userId → Set of socketIds
+    private onlineUsers = new Map<string, Set<string>>();
+
+    constructor(
+        private jwtService: JwtService,
+        private chatService: ChatService,
+        private notificationsService: NotificationsService,
+    ) {}
+
+    /* ── Connection lifecycle ────────────────────────────── */
+
+    async handleConnection(client: Socket) {
+        try {
+            const token = client.handshake.auth?.token;
+            if (!token) {
+                client.disconnect();
+                return;
+            }
+
+            const payload = this.jwtService.verify(token);
+            const userData: SocketUser = {
+                userId: payload.sub,
+                email: payload.email,
+                role: payload.role,
+                departmentId: payload.departmentId,
+            };
+            client.data.user = userData;
+
+            // Ensure user is in their channels
+            await this.chatService.ensureUserChannels(userData.userId, userData.departmentId, userData.role);
+
+            // Join socket rooms for all channels
+            const channelIds = await this.chatService.getUserChannelIds(userData.userId);
+            for (const id of channelIds) {
+                client.join(`channel:${id}`);
+            }
+
+            // Track online presence
+            if (!this.onlineUsers.has(userData.userId)) {
+                this.onlineUsers.set(userData.userId, new Set());
+            }
+            this.onlineUsers.get(userData.userId)!.add(client.id);
+
+            // Broadcast to all: user is online
+            this.server.emit('user:online', { userId: userData.userId });
+
+            // Send current online users list to the newly connected client
+            const onlineList = Array.from(this.onlineUsers.keys());
+            client.emit('users:online', onlineList);
+
+            this.logger.log(`Client connected: ${userData.email} (${client.id})`);
+        } catch {
+            client.disconnect();
+        }
+    }
+
+    async handleDisconnect(client: Socket) {
+        const user = client.data.user as SocketUser | undefined;
+        if (!user) return;
+
+        const sockets = this.onlineUsers.get(user.userId);
+        if (sockets) {
+            sockets.delete(client.id);
+            if (sockets.size === 0) {
+                this.onlineUsers.delete(user.userId);
+                // Broadcast: user went offline
+                this.server.emit('user:offline', { userId: user.userId });
+            }
+        }
+
+        this.logger.log(`Client disconnected: ${user.email} (${client.id})`);
+    }
+
+    /* ── Message events ──────────────────────────────────── */
+
+    @SubscribeMessage('message:send')
+    async handleMessageSend(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: {
+            channelId: string;
+            content: string;
+            replyToId?: string;
+            mentions?: string[];
+        },
+    ) {
+        const user = client.data.user as SocketUser;
+        if (!user || !data.channelId || !data.content?.trim()) return;
+
+        const message = await this.chatService.createMessage(
+            data.channelId,
+            user.userId,
+            data.content.trim(),
+            data.replyToId || null,
+            data.mentions || null,
+        );
+
+        // Broadcast to all members in the channel room
+        this.server.to(`channel:${data.channelId}`).emit('message:new', message);
+
+        // Send mention notifications
+        if (data.mentions && data.mentions.length > 0) {
+            const recipients = data.mentions.filter(id => id !== user.userId);
+            if (recipients.length > 0) {
+                const senderName = `${message.sender.firstName} ${message.sender.lastName}`.trim();
+                const preview = message.content.length > 80
+                    ? message.content.substring(0, 80) + '...'
+                    : message.content;
+
+                await this.notificationsService.createMany(
+                    recipients.map(userId => ({
+                        title: `${senderName} mentioned you`,
+                        body: preview,
+                        type: 'chat',
+                        userId,
+                    })),
+                );
+            }
+        }
+
+        return message;
+    }
+
+    @SubscribeMessage('message:read')
+    async handleMessageRead(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { channelId: string },
+    ) {
+        const user = client.data.user as SocketUser;
+        if (!user || !data.channelId) return;
+
+        await this.chatService.markAsRead(data.channelId, user.userId);
+
+        // Broadcast read update to channel members
+        this.server.to(`channel:${data.channelId}`).emit('read:update', {
+            channelId: data.channelId,
+            userId: user.userId,
+            lastReadAt: new Date().toISOString(),
+        });
+    }
+
+    /* ── Typing events ───────────────────────────────────── */
+
+    @SubscribeMessage('typing:start')
+    handleTypingStart(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { channelId: string },
+    ) {
+        const user = client.data.user as SocketUser;
+        if (!user || !data.channelId) return;
+
+        client.to(`channel:${data.channelId}`).emit('typing', {
+            channelId: data.channelId,
+            userId: user.userId,
+        });
+    }
+
+    @SubscribeMessage('typing:stop')
+    handleTypingStop(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { channelId: string },
+    ) {
+        const user = client.data.user as SocketUser;
+        if (!user || !data.channelId) return;
+
+        client.to(`channel:${data.channelId}`).emit('typing:stop', {
+            channelId: data.channelId,
+            userId: user.userId,
+        });
+    }
+
+    /* ── Channel join (for new DMs) ──────────────────────── */
+
+    @SubscribeMessage('channel:join')
+    handleChannelJoin(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { channelId: string },
+    ) {
+        if (!data.channelId) return;
+        client.join(`channel:${data.channelId}`);
+    }
+
+    /* ── Helper: join a user to a room across all their sockets ── */
+
+    joinUserToChannel(userId: string, channelId: string) {
+        const sockets = this.onlineUsers.get(userId);
+        if (sockets) {
+            for (const socketId of sockets) {
+                const socket = this.server.sockets.sockets.get(socketId);
+                if (socket) {
+                    socket.join(`channel:${channelId}`);
+                }
+            }
+        }
+    }
+}
