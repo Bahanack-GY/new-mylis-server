@@ -4,6 +4,7 @@ import {
     SubscribeMessage,
     OnGatewayConnection,
     OnGatewayDisconnect,
+    OnGatewayInit,
     MessageBody,
     ConnectedSocket,
 } from '@nestjs/websockets';
@@ -21,7 +22,7 @@ interface SocketUser {
 }
 
 @WebSocketGateway({ cors: { origin: true, credentials: true } })
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     @WebSocketServer()
     server: Server;
 
@@ -35,6 +36,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         private chatService: ChatService,
         private notificationsService: NotificationsService,
     ) { }
+
+    afterInit() {
+        this.notificationsService.setPushCallback((userId, payload) => {
+            const sockets = this.onlineUsers.get(userId);
+            if (sockets) {
+                for (const socketId of sockets) {
+                    this.server.to(socketId).emit('notification:push', payload);
+                }
+            }
+        });
+    }
 
     /* ── Connection lifecycle ────────────────────────────── */
 

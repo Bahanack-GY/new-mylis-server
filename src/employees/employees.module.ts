@@ -7,9 +7,10 @@ import { Task } from '../models/task.model';
 import { EmployeesService } from './employees.service';
 import { EmployeesController } from './employees.controller';
 import { UsersModule } from '../users/users.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-    imports: [SequelizeModule.forFeature([Employee, EmployeeBadge, Task]), UsersModule],
+    imports: [SequelizeModule.forFeature([Employee, EmployeeBadge, Task]), UsersModule, NotificationsModule],
     controllers: [EmployeesController],
     providers: [EmployeesService],
     exports: [EmployeesService],

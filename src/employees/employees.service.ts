@@ -8,6 +8,7 @@ import { Department } from '../models/department.model';
 import { Position } from '../models/position.model';
 import { Task } from '../models/task.model';
 import { UsersService } from '../users/users.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { Op, literal } from 'sequelize';
 
 @Injectable()
@@ -20,6 +21,7 @@ export class EmployeesService {
         @InjectModel(Task)
         private taskModel: typeof Task,
         private usersService: UsersService,
+        private notificationsService: NotificationsService,
     ) { }
 
     async findAll(departmentId?: string): Promise<Employee[]> {
@@ -60,10 +62,36 @@ export class EmployeesService {
         }
 
         // 2. Create Employee linked to User
-        return this.employeeModel.create({
+        const employee = await this.employeeModel.create({
             ...createEmployeeDto,
             userId: user.id
         });
+
+        // 3. Notify department members about new colleague
+        if (createEmployeeDto.departmentId) {
+            const colleagues = await this.employeeModel.findAll({
+                where: {
+                    departmentId: createEmployeeDto.departmentId,
+                    dismissed: false,
+                    id: { [Op.ne]: employee.id },
+                },
+                attributes: ['userId'],
+            });
+            const empName = `${createEmployeeDto.firstName || ''} ${createEmployeeDto.lastName || ''}`.trim() || 'A new colleague';
+            const notifications = colleagues
+                .filter(c => c.userId)
+                .map(c => ({
+                    title: 'New team member',
+                    body: `${empName} has joined your department`,
+                    type: 'system' as const,
+                    userId: c.userId,
+                }));
+            if (notifications.length > 0) {
+                await this.notificationsService.createMany(notifications);
+            }
+        }
+
+        return employee;
     }
 
     async update(id: string, updateEmployeeDto: any): Promise<[number, Employee[]]> {

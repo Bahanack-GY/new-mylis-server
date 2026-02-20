@@ -7,6 +7,7 @@ import { Employee } from '../models/employee.model';
 import { join } from 'path';
 import { readdirSync, statSync } from 'fs';
 import { Op } from 'sequelize';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class DocumentsService {
@@ -15,6 +16,7 @@ export class DocumentsService {
         private documentModel: typeof Document,
         @InjectModel(Employee)
         private employeeModel: typeof Employee,
+        private notificationsService: NotificationsService,
     ) { }
 
     getStorageInfo() {
@@ -49,7 +51,22 @@ export class DocumentsService {
                 createDocumentDto.employeeId = employee.getDataValue('id');
             }
         }
-        return this.documentModel.create(createDocumentDto);
+        const doc = await this.documentModel.create(createDocumentDto);
+
+        // Notify the employee if a document was uploaded for them (by someone else)
+        if (createDocumentDto.employeeId) {
+            const targetEmployee = await this.employeeModel.findByPk(createDocumentDto.employeeId, { attributes: ['userId'] });
+            if (targetEmployee && targetEmployee.userId && targetEmployee.userId !== createDocumentDto.uploadedById) {
+                await this.notificationsService.create({
+                    title: 'New document',
+                    body: `A new document "${createDocumentDto.name || 'Untitled'}" has been added to your file`,
+                    type: 'document',
+                    userId: targetEmployee.userId,
+                });
+            }
+        }
+
+        return doc;
     }
 
     findAll() {

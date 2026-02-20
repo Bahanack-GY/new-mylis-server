@@ -32,7 +32,22 @@ export class TasksService {
     ) { }
 
     async create(createTaskDto: any): Promise<Task> {
-        return this.taskModel.create(createTaskDto);
+        const task = await this.taskModel.create(createTaskDto);
+
+        // Notify assigned employee about new task
+        if (createTaskDto.assignedToId) {
+            const employee = await this.employeeModel.findByPk(createTaskDto.assignedToId);
+            if (employee && employee.userId) {
+                await this.notificationsService.create({
+                    title: 'New task assigned',
+                    body: `You have been assigned a new task: "${task.getDataValue('title')}"`,
+                    type: 'task',
+                    userId: employee.userId,
+                });
+            }
+        }
+
+        return task;
     }
 
     async findAll(departmentId?: string, from?: string, to?: string): Promise<Task[]> {
@@ -111,8 +126,29 @@ export class TasksService {
             gamification = await this.gamificationService.processTaskCompletion(employee.id, task);
         }
 
-        // Sync linked ticket status + notify stakeholders
+        // Notify managers/HOD on task completion (non-ticket tasks)
         const ticketId = task.getDataValue('ticketId');
+        if (state === 'COMPLETED' && !ticketId) {
+            const empName = `${employee.getDataValue('firstName')} ${employee.getDataValue('lastName')}`;
+            const deptId = employee.getDataValue('departmentId');
+            if (deptId) {
+                const dept = await this.departmentModel.findByPk(deptId, {
+                    include: [{ model: Employee, as: 'head' }],
+                });
+                const head = dept?.getDataValue('head');
+                const hodUserId = head?.getDataValue('userId');
+                if (hodUserId && hodUserId !== userId) {
+                    await this.notificationsService.create({
+                        title: 'Task completed',
+                        body: `${empName} has completed the task "${task.getDataValue('title')}"`,
+                        type: 'task',
+                        userId: hodUserId,
+                    });
+                }
+            }
+        }
+
+        // Sync linked ticket status + notify stakeholders
         if (ticketId && TASK_TO_TICKET_STATUS[state]) {
             const ticketStatus = TASK_TO_TICKET_STATUS[state];
             await this.ticketModel.update(
