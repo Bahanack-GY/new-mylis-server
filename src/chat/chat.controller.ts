@@ -1,5 +1,9 @@
-import { Controller, Get, Post, Patch, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Query, UseGuards, Request, UseInterceptors, UploadedFiles } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
+import { mkdirSync } from 'fs';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { ChatService } from './chat.service';
@@ -69,5 +73,29 @@ export class ChatController {
     @Get('users')
     getUsers(@Request() req) {
         return this.chatService.getUsers(req.user.userId);
+    }
+
+    @Post('upload')
+    @UseInterceptors(FilesInterceptor('files', 10, {
+        storage: diskStorage({
+            destination: (_req, _file, cb) => {
+                const uploadPath = join(process.cwd(), 'uploads', 'chat');
+                mkdirSync(uploadPath, { recursive: true });
+                cb(null, uploadPath);
+            },
+            filename: (_req, file, cb) => {
+                const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+                cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
+            },
+        }),
+        limits: { fileSize: 50 * 1024 * 1024 },
+    }))
+    uploadFiles(@UploadedFiles() files: Express.Multer.File[]) {
+        return (files || []).map(file => ({
+            fileName: file.originalname,
+            filePath: `/uploads/chat/${file.filename}`,
+            fileType: file.mimetype,
+            size: file.size,
+        }));
     }
 }

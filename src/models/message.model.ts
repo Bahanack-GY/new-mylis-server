@@ -34,6 +34,7 @@ export class Message extends Model {
     @Column({
         type: DataType.TEXT,
         allowNull: false,
+        defaultValue: '',
     })
     declare content: string;
 
@@ -53,4 +54,16 @@ export class Message extends Model {
         defaultValue: null,
     })
     declare mentions: string[] | null;
+
+    @Column({
+        type: DataType.JSONB,
+        allowNull: true,
+        defaultValue: null,
+    })
+    declare attachments: {
+        fileName: string;
+        filePath: string;
+        fileType: string;
+        size: number;
+    }[] | null;
 }

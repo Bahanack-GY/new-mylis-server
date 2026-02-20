@@ -5,6 +5,7 @@ import { Demand } from '../models/demand.model';
 import { DemandItem } from '../models/demand-item.model';
 import { Employee } from '../models/employee.model';
 import { Department } from '../models/department.model';
+import { User } from '../models/user.model';
 import { Op } from 'sequelize';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ExpensesService } from '../expenses/expenses.service';
@@ -18,6 +19,8 @@ export class DemandsService {
         private demandItemModel: typeof DemandItem,
         @InjectModel(Employee)
         private employeeModel: typeof Employee,
+        @InjectModel(User)
+        private userModel: typeof User,
         private notificationsService: NotificationsService,
         private expensesService: ExpensesService,
     ) { }
@@ -46,6 +49,23 @@ export class DemandsService {
                     quantity: item.quantity || 1,
                     unitPrice: item.unitPrice || 0,
                     imageUrl: item.imageUrl || null,
+                })),
+            );
+        }
+
+        // Notify all managers about the new demand
+        const employeeName = `${employee.getDataValue('firstName')} ${employee.getDataValue('lastName')}`.trim();
+        const managers = await this.userModel.findAll({
+            where: { role: 'MANAGER' },
+            attributes: ['id'],
+        });
+        if (managers.length > 0) {
+            await this.notificationsService.createMany(
+                managers.map(m => ({
+                    title: 'New demand submitted',
+                    body: `${employeeName} submitted a demand for ${new Intl.NumberFormat('fr-FR').format(totalPrice)} FCFA`,
+                    type: 'demand',
+                    userId: m.getDataValue('id'),
                 })),
             );
         }

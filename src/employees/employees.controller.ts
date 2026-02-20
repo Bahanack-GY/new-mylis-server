@@ -29,6 +29,12 @@ export class EmployeesController {
         return this.employeesService.getLeaderboard(limit ? parseInt(limit, 10) : 5);
     }
 
+    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'EMPLOYEE')
+    @Get('birthdays/today')
+    getTodayBirthdays() {
+        return this.employeesService.getTodayBirthdays();
+    }
+
     @Get(':id/stats')
     getStats(@Param('id') id: string) {
         return this.employeesService.getEmployeeStats(id);

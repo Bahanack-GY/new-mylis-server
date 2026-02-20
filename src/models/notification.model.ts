@@ -21,7 +21,7 @@ export class Notification extends Model {
     body: string;
 
     @Column({
-        type: DataType.ENUM('system', 'task', 'project', 'meeting', 'document', 'ticket', 'sanction', 'chat'),
+        type: DataType.ENUM('system', 'task', 'project', 'meeting', 'document', 'ticket', 'sanction', 'chat', 'demand', 'message'),
         defaultValue: 'system',
     })
     type: string;

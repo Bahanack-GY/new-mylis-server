@@ -30,6 +30,12 @@ export class User extends Model {
     })
     declare role: string;
 
+    @Column({
+        type: DataType.BOOLEAN,
+        defaultValue: true,
+    })
+    declare firstLogin: boolean;
+
     @HasOne(() => Employee)
     declare employee: Employee;
 }

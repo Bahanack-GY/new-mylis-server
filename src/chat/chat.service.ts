@@ -21,7 +21,7 @@ export class ChatService implements OnModuleInit {
         @InjectModel(Employee) private employeeModel: typeof Employee,
         @InjectModel(Department) private departmentModel: typeof Department,
         private sequelize: Sequelize,
-    ) {}
+    ) { }
 
     async onModuleInit() {
         // Ensure MANAGERS enum value exists (PostgreSQL ENUMs need explicit ALTER)
@@ -38,6 +38,20 @@ export class ChatService implements OnModuleInit {
             );
         } catch {
             // Ignore if already exists or not PostgreSQL
+        }
+        try {
+            await this.sequelize.query(
+                `ALTER TYPE "enum_Notifications_type" ADD VALUE IF NOT EXISTS 'demand'`,
+            );
+        } catch {
+            // Ignore
+        }
+        try {
+            await this.sequelize.query(
+                `ALTER TYPE "enum_Notifications_type" ADD VALUE IF NOT EXISTS 'message'`,
+            );
+        } catch {
+            // Ignore
         }
         await this.seedChannels();
     }
@@ -349,6 +363,7 @@ export class ChatService implements OnModuleInit {
                 createdAt: msg.createdAt,
                 replyTo: msg.replyToId ? (replyMap.get(msg.replyToId) || null) : null,
                 mentions: msg.mentions || null,
+                attachments: msg.attachments || null,
                 sender: {
                     id: msg.senderId,
                     ...info,
@@ -363,6 +378,7 @@ export class ChatService implements OnModuleInit {
         content: string,
         replyToId?: string | null,
         mentions?: string[] | null,
+        attachments?: { fileName: string; filePath: string; fileType: string; size: number }[] | null,
     ) {
         const message = await this.messageModel.create({
             channelId,
@@ -370,6 +386,7 @@ export class ChatService implements OnModuleInit {
             content,
             replyToId: replyToId || null,
             mentions: mentions && mentions.length > 0 ? mentions : null,
+            attachments: attachments && attachments.length > 0 ? attachments : null,
         });
 
         // Update channel's updatedAt
@@ -410,6 +427,7 @@ export class ChatService implements OnModuleInit {
             createdAt: message.createdAt,
             replyTo: replyToData,
             mentions: message.mentions || null,
+            attachments: message.attachments || null,
             sender: {
                 id: senderId,
                 ...info,
@@ -519,6 +537,40 @@ export class ChatService implements OnModuleInit {
     }
 
     /* ── Helpers ──────────────────────────────────────────── */
+
+    async updateDemandCardStatus(demandId: string, newStatus: string): Promise<{ channelId: string; messageId: string; content: string } | null> {
+        // Find the message containing this demand card
+        const message = await this.messageModel.findOne({
+            where: {
+                content: { [Op.like]: `%"demandId":"${demandId}"%` },
+            },
+        });
+
+        if (!message) return null;
+
+        // Parse and update the demand card status in the message content
+        const match = message.content.match(/^\[DEMAND_CARD:(.+)\]$/s);
+        if (!match) return null;
+
+        try {
+            const cardData = JSON.parse(match[1]);
+            cardData.status = newStatus;
+            const updatedContent = `[DEMAND_CARD:${JSON.stringify(cardData)}]`;
+
+            await this.messageModel.update(
+                { content: updatedContent },
+                { where: { id: message.id } },
+            );
+
+            return {
+                channelId: message.channelId,
+                messageId: message.id,
+                content: updatedContent,
+            };
+        } catch {
+            return null;
+        }
+    }
 
     async getUserChannelIds(userId: string): Promise<string[]> {
         const memberships = await this.channelMemberModel.findAll({

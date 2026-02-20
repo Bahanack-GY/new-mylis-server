@@ -33,6 +33,12 @@ export class AuthController {
     }
 
     @UseGuards(AuthGuard('jwt'))
+    @Patch('first-login-done')
+    markFirstLoginDone(@Request() req) {
+        return this.authService.markFirstLoginDone(req.user.userId);
+    }
+
+    @UseGuards(AuthGuard('jwt'))
     @Patch('profile')
     updateProfile(@Request() req, @Body() dto: any) {
         return this.authService.updateProfile(req.user.userId, dto);

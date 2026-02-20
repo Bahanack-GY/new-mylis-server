@@ -87,6 +87,7 @@ export class AuthService {
             userId: user.id,
             email: user.email,
             role: user.role,
+            firstLogin: user.firstLogin ?? false,
             departmentId: employee?.getDataValue('departmentId') || null,
             employeeId: employeeId || null,
             firstName: employee?.getDataValue('firstName') || '',
@@ -104,6 +105,13 @@ export class AuthService {
             points: employee?.getDataValue('points') || 0,
             completedTasksCount,
         };
+    }
+
+    async markFirstLoginDone(userId: string) {
+        const user = await this.usersService.findOneById(userId);
+        if (!user) return null;
+        await user.update({ firstLogin: false });
+        return { success: true };
     }
 
     async getMyBadges(userId: string) {

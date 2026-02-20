@@ -8,7 +8,7 @@ import { Department } from '../models/department.model';
 import { Position } from '../models/position.model';
 import { Task } from '../models/task.model';
 import { UsersService } from '../users/users.service';
-import { Op } from 'sequelize';
+import { Op, literal } from 'sequelize';
 
 @Injectable()
 export class EmployeesService {
@@ -201,6 +201,36 @@ export class EmployeesService {
         return this.employeeBadgeModel.findAll({
             where: { employeeId },
             order: [['badgeNumber', 'ASC']],
+        });
+    }
+
+    async getTodayBirthdays() {
+        const now = new Date();
+        const month = now.getMonth() + 1;
+        const day = now.getDate();
+
+        const employees = await this.employeeModel.findAll({
+            where: {
+                dismissed: false,
+                birthDate: { [Op.ne]: null },
+                [Op.and]: [
+                    literal(`EXTRACT(MONTH FROM "birthDate") = ${month}`),
+                    literal(`EXTRACT(DAY FROM "birthDate") = ${day}`),
+                ],
+            },
+            attributes: ['id', 'firstName', 'lastName', 'avatarUrl', 'birthDate'],
+            include: [{ model: Department, attributes: ['name'] }],
+        });
+
+        return employees.map(e => {
+            const plain = e.get({ plain: true }) as any;
+            return {
+                id: plain.id,
+                firstName: plain.firstName || '',
+                lastName: plain.lastName || '',
+                avatarUrl: plain.avatarUrl || null,
+                departmentName: plain.department?.name || '',
+            };
         });
     }
 }

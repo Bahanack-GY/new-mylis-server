@@ -34,7 +34,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         private jwtService: JwtService,
         private chatService: ChatService,
         private notificationsService: NotificationsService,
-    ) {}
+    ) { }
 
     /* ── Connection lifecycle ────────────────────────────── */
 
@@ -110,31 +110,52 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             content: string;
             replyToId?: string;
             mentions?: string[];
+            attachments?: { fileName: string; filePath: string; fileType: string; size: number }[];
         },
     ) {
         const user = client.data.user as SocketUser;
-        if (!user || !data.channelId || !data.content?.trim()) return;
+        if (!user || !data.channelId) return;
+
+        const hasContent = data.content?.trim();
+        const hasAttachments = data.attachments && data.attachments.length > 0;
+        if (!hasContent && !hasAttachments) return;
 
         const message = await this.chatService.createMessage(
             data.channelId,
             user.userId,
-            data.content.trim(),
+            data.content?.trim() || '',
             data.replyToId || null,
             data.mentions || null,
+            data.attachments || null,
         );
 
         // Broadcast to all members in the channel room
         this.server.to(`channel:${data.channelId}`).emit('message:new', message);
 
-        // Send mention notifications
+        // Send message notification to all other channel members (not the sender)
+        const senderName = `${message.sender.firstName} ${message.sender.lastName}`.trim() || 'Someone';
+        const preview = message.content.length > 80
+            ? message.content.substring(0, 80) + '...'
+            : message.content;
+
+        const memberUserIds = await this.chatService.getChannelMemberUserIds(data.channelId);
+        const otherMembers = memberUserIds.filter(id => id !== user.userId);
+
+        if (otherMembers.length > 0) {
+            await this.notificationsService.createMany(
+                otherMembers.map(userId => ({
+                    title: `New message from ${senderName}`,
+                    body: preview || 'Sent an attachment',
+                    type: 'message',
+                    userId,
+                })),
+            );
+        }
+
+        // Send mention notifications (additional emphasis)
         if (data.mentions && data.mentions.length > 0) {
             const recipients = data.mentions.filter(id => id !== user.userId);
             if (recipients.length > 0) {
-                const senderName = `${message.sender.firstName} ${message.sender.lastName}`.trim();
-                const preview = message.content.length > 80
-                    ? message.content.substring(0, 80) + '...'
-                    : message.content;
-
                 await this.notificationsService.createMany(
                     recipients.map(userId => ({
                         title: `${senderName} mentioned you`,
@@ -195,6 +216,27 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             channelId: data.channelId,
             userId: user.userId,
         });
+    }
+
+    /* ── Demand status update ────────────────────────────── */
+
+    @SubscribeMessage('demand:statusUpdate')
+    async handleDemandStatusUpdate(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { demandId: string; status: string },
+    ) {
+        const user = client.data.user as SocketUser;
+        if (!user || !data.demandId || !data.status) return;
+
+        const result = await this.chatService.updateDemandCardStatus(data.demandId, data.status);
+        if (result) {
+            // Broadcast the updated message to all channel members
+            this.server.to(`channel:${result.channelId}`).emit('message:updated', {
+                messageId: result.messageId,
+                channelId: result.channelId,
+                content: result.content,
+            });
+        }
     }
 
     /* ── Channel join (for new DMs) ──────────────────────── */
