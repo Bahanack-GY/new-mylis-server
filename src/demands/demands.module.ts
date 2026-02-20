@@ -8,9 +8,10 @@ import { Department } from '../models/department.model';
 import { DemandsService } from './demands.service';
 import { DemandsController } from './demands.controller';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { ExpensesModule } from '../expenses/expenses.module';
 
 @Module({
-    imports: [SequelizeModule.forFeature([Demand, DemandItem, Employee, Department]), NotificationsModule],
+    imports: [SequelizeModule.forFeature([Demand, DemandItem, Employee, Department]), NotificationsModule, ExpensesModule],
     controllers: [DemandsController],
     providers: [DemandsService],
     exports: [DemandsService],

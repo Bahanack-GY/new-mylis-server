@@ -20,6 +20,7 @@ import { InvoicesModule } from './invoices/invoices.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ChatModule } from './chat/chat.module';
 import { DemandsModule } from './demands/demands.module';
+import { ExpensesModule } from './expenses/expenses.module';
 import { RolesGuard } from './auth/roles.guard';
 import { ActivityInterceptor } from './logs/activity.interceptor';
 
@@ -53,6 +54,7 @@ import { ActivityInterceptor } from './logs/activity.interceptor';
     NotificationsModule,
     ChatModule,
     DemandsModule,
+    ExpensesModule,
   ],
   controllers: [AppController],
   providers: [

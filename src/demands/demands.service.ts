@@ -7,6 +7,7 @@ import { Employee } from '../models/employee.model';
 import { Department } from '../models/department.model';
 import { Op } from 'sequelize';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ExpensesService } from '../expenses/expenses.service';
 
 @Injectable()
 export class DemandsService {
@@ -18,6 +19,7 @@ export class DemandsService {
         @InjectModel(Employee)
         private employeeModel: typeof Employee,
         private notificationsService: NotificationsService,
+        private expensesService: ExpensesService,
     ) { }
 
     async create(createDemandDto: any, userId: string) {
@@ -61,7 +63,7 @@ export class DemandsService {
                 {
                     model: Employee,
                     as: 'employee',
-                    attributes: ['id', 'firstName', 'lastName', 'avatarUrl'],
+                    attributes: ['id', 'firstName', 'lastName', 'avatarUrl', 'userId'],
                 },
                 {
                     model: Department,
@@ -129,15 +131,26 @@ export class DemandsService {
             { where: { id } },
         );
 
-        const empUserId = demand.getDataValue('employee')?.userId;
-        if (empUserId) {
+        const employee = demand.employee;
+        if (employee?.userId) {
             await this.notificationsService.createMany([{
                 title: 'Demand validated',
                 body: `Your demand has been validated.`,
                 type: 'demand',
-                userId: empUserId,
+                userId: employee.userId,
             }]);
         }
+
+        // Auto-create expense
+        const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : 'Unknown';
+        await this.expensesService.create({
+            title: `Demande: ${employeeName}`,
+            amount: parseFloat(demand.getDataValue('totalPrice')) || 0,
+            category: 'Demande',
+            type: 'ONE_TIME',
+            date: new Date().toISOString().split('T')[0],
+            demandId: id,
+        });
 
         return this.findOne(id);
     }
@@ -150,13 +163,13 @@ export class DemandsService {
             { where: { id } },
         );
 
-        const empUserId = demand.getDataValue('employee')?.userId;
-        if (empUserId) {
+        const employee = demand.employee;
+        if (employee?.userId) {
             await this.notificationsService.createMany([{
                 title: 'Demand rejected',
                 body: `Your demand has been rejected.${reason ? ` Reason: ${reason}` : ''}`,
                 type: 'demand',
-                userId: empUserId,
+                userId: employee.userId,
             }]);
         }
 
