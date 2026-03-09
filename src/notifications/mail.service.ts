@@ -17,6 +17,7 @@ export class MailService {
     });
 
     async sendNotification(to: string, title: string, body: string): Promise<void> {
+        this.logger.log(`Sending email → ${to} | "${title}"`);
         try {
             await this.transporter.sendMail({
                 from: '"MyLIS" <noreply@lis.cm>',
@@ -25,9 +26,9 @@ export class MailService {
                 html: this.buildTemplate(title, body),
                 text: `${title}\n\n${body}`,
             });
+            this.logger.log(`Email sent ✓ → ${to} | "${title}"`);
         } catch (err) {
-            // Log but never crash the notification flow
-            this.logger.error(`Failed to send email to ${to}: ${err?.message}`);
+            this.logger.error(`Email failed → ${to} | "${title}" | ${err?.message}`);
         }
     }
 
