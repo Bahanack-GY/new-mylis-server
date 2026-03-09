@@ -41,6 +41,12 @@ export class InvoiceItem extends Model {
     })
     declare amount: number;
 
+    @Column({
+        type: DataType.JSONB,
+        allowNull: true,
+    })
+    declare metadata: Record<string, string> | null;
+
     @BelongsTo(() => Invoice)
     declare invoice: Invoice;
 }

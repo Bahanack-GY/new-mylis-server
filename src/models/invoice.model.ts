@@ -88,6 +88,12 @@ export class Invoice extends Model {
     @Column(DataType.TEXT)
     declare notes: string;
 
+    @Column({
+        type: DataType.JSONB,
+        allowNull: true,
+    })
+    declare customColumns: { id: string; label: string }[] | null;
+
     @Column(DataType.DATE)
     declare paidAt: Date;
 

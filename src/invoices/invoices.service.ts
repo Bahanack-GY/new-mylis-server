@@ -57,6 +57,7 @@ export class InvoicesService {
             taxAmount,
             total,
             notes: dto.notes,
+            customColumns: dto.customColumns || null,
         });
 
         if (items.length > 0) {
@@ -67,6 +68,7 @@ export class InvoicesService {
                     quantity: Number(item.quantity),
                     unitPrice: Number(item.unitPrice),
                     amount: Number(item.quantity) * Number(item.unitPrice),
+                    metadata: item.metadata || null,
                 })),
             );
         }
