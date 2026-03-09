@@ -88,7 +88,7 @@ export class ChatController {
                 cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
             },
         }),
-        limits: { fileSize: 50 * 1024 * 1024 },
+        limits: { fileSize: 5 * 1024 * 1024 * 1024 },
     }))
     uploadFiles(@UploadedFiles() files: Express.Multer.File[]) {
         return (files || []).map(file => ({

@@ -18,6 +18,16 @@ import { Sanction } from '../models/sanction.model';
 import { Document } from '../models/document.model';
 import { ProjectMember } from '../models/project-member.model';
 import { DepartmentGoal } from '../models/department-goal.model';
+import { EmployeeBadge } from '../models/employee-badge.model';
+import { Invoice } from '../models/invoice.model';
+import { InvoiceItem } from '../models/invoice-item.model';
+import { InvoiceTemplate } from '../models/invoice-template.model';
+import { Channel } from '../models/channel.model';
+import { ChannelMember } from '../models/channel-member.model';
+import { Message } from '../models/message.model';
+import { Meeting } from '../models/meeting.model';
+import { MeetingParticipant } from '../models/meeting-participant.model';
+import { Notification } from '../models/notification.model';
 
 dotenv.config();
 
@@ -46,6 +56,16 @@ async function seed() {
             Document,
             ProjectMember,
             DepartmentGoal,
+            EmployeeBadge,
+            Invoice,
+            InvoiceItem,
+            InvoiceTemplate,
+            Channel,
+            ChannelMember,
+            Message,
+            Meeting,
+            MeetingParticipant,
+            Notification,
         ],
         logging: false,
     });

@@ -30,7 +30,7 @@ describe('InvoicesService', () => {
 
     beforeEach(async () => {
         invoiceModel = {
-            create: jest.fn().mockResolvedValue({ id: 'inv-1', ...mockInvoice }),
+            create: jest.fn().mockResolvedValue({ ...mockInvoice }),
             findAll: jest.fn().mockResolvedValue([mockInvoice]),
             findByPk: jest.fn().mockResolvedValue(mockInvoice),
             findOne: jest.fn().mockResolvedValue(null),

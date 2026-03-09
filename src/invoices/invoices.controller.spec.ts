@@ -50,7 +50,7 @@ describe('InvoicesController', () => {
 
         it('MANAGER: passes undefined if no departmentId', async () => {
             const req = { user: { role: 'MANAGER', userId: 'u1' } };
-            await controller.findAll(undefined, req);
+            await controller.findAll(undefined as any, req);
             expect(invoicesService.findAll).toHaveBeenCalledWith(undefined);
         });
 

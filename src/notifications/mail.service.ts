@@ -11,7 +11,7 @@ export class MailService {
         port: 465,
         secure: true, // SSL/TLS
         auth: {
-            user: 'noreply@lis.cm',
+            user: 'mychurch@lis.cm',
             pass: 'L1sm0negli5e',
         },
     });
@@ -20,7 +20,7 @@ export class MailService {
         this.logger.log(`Sending email → ${to} | "${title}"`);
         try {
             await this.transporter.sendMail({
-                from: '"MyLIS" <noreply@lis.cm>',
+                from: '"MyLIS" <mychurch@lis.cm>',
                 to,
                 subject: title,
                 html: this.buildTemplate(title, body),
