@@ -39,7 +39,7 @@ export class DepartmentsService {
         if (!department) return null;
 
         // If headId is changing, revert old head and set new head
-        if ('headId' in updateDepartmentDto && updateDepartmentDto.headId !== department.headId) {
+        if ('headId' in updateDepartmentDto && updateDepartmentDto.headId !== undefined && updateDepartmentDto.headId !== department.headId) {
             if (department.headId) {
                 await this.setHeadRole(department.headId, 'EMPLOYEE');
             }
