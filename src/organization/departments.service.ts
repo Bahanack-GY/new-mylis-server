@@ -1,5 +1,5 @@
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Department } from '../models/department.model';
 import { DepartmentGoal } from '../models/department-goal.model';
@@ -10,6 +10,8 @@ import { Project } from '../models/project.model';
 
 @Injectable()
 export class DepartmentsService {
+    private readonly logger = new Logger(DepartmentsService.name);
+
     constructor(
         @InjectModel(Department)
         private departmentModel: typeof Department,
@@ -21,9 +23,17 @@ export class DepartmentsService {
 
     private async setHeadRole(employeeId: string, role: 'HEAD_OF_DEPARTMENT' | 'EMPLOYEE') {
         const employee = await this.employeeModel.findByPk(employeeId);
-        if (employee?.userId) {
-            await this.userModel.update({ role }, { where: { id: employee.userId } });
+        if (!employee) {
+            this.logger.warn(`setHeadRole: employee ${employeeId} not found`);
+            return;
         }
+        const userId = employee.getDataValue('userId');
+        if (!userId) {
+            this.logger.warn(`setHeadRole: employee ${employeeId} has no userId`);
+            return;
+        }
+        const [affected] = await this.userModel.update({ role }, { where: { id: userId } });
+        this.logger.log(`setHeadRole: employee ${employeeId} → user ${userId} → role=${role} (${affected} row updated)`);
     }
 
     async create(createDepartmentDto: any) {

@@ -15,24 +15,24 @@ export class Formation extends Model {
         type: DataType.STRING,
         allowNull: false,
     })
-    title: string;
+    declare title: string;
 
     @Column(DataType.STRING)
-    organization: string;
+    declare organization: string;
 
     @Column(DataType.DATE)
-    startDate: Date;
+    declare startDate: Date;
 
     @Column(DataType.DATE)
-    endDate: Date;
+    declare endDate: Date;
 
     @Column(DataType.STRING)
-    certificateDetails: string;
+    declare certificateDetails: string;
 
     @ForeignKey(() => Employee)
     @Column(DataType.UUID)
-    employeeId: string;
+    declare employeeId: string;
 
     @BelongsTo(() => Employee)
-    employee: Employee;
+    declare employee: Employee;
 }

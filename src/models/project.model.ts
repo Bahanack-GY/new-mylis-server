@@ -18,37 +18,37 @@ export class Project extends Model {
         type: DataType.STRING,
         allowNull: false,
     })
-    name: string;
+    declare name: string;
 
     @Column(DataType.TEXT)
-    description: string;
+    declare description: string;
 
     @Column(DataType.FLOAT)
-    budget: number;
+    declare budget: number;
 
     @Column(DataType.DATE)
-    startDate: Date;
+    declare startDate: Date;
 
     @Column(DataType.DATE)
-    endDate: Date;
+    declare endDate: Date;
 
     @ForeignKey(() => Client)
     @Column(DataType.UUID)
-    clientId: string;
+    declare clientId: string;
 
     @BelongsTo(() => Client)
-    client: Client;
+    declare client: Client;
 
     @ForeignKey(() => Department)
     @Column(DataType.UUID)
-    departmentId: string;
+    declare departmentId: string;
 
     @BelongsTo(() => Department)
-    department: Department;
+    declare department: Department;
 
     @BelongsToMany(() => Employee, () => ProjectMember)
-    members: Employee[];
+    declare members: Employee[];
 
     @HasMany(() => Task)
-    tasks: Task[];
+    declare tasks: Task[];
 }

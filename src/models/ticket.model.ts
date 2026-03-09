@@ -17,47 +17,47 @@ export class Ticket extends Model {
         type: DataType.STRING,
         allowNull: false,
     })
-    title: string;
+    declare title: string;
 
     @Column(DataType.TEXT)
-    description: string;
+    declare description: string;
 
     @Column({
         type: DataType.ENUM('OPEN', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED', 'CLOSED'),
         defaultValue: 'OPEN',
     })
-    status: string;
+    declare status: string;
 
     @Column({
         type: DataType.ENUM('LOW', 'MEDIUM', 'HIGH', 'URGENT'),
         defaultValue: 'MEDIUM',
     })
-    priority: string;
+    declare priority: string;
 
     @ForeignKey(() => User)
     @Column(DataType.UUID)
-    createdById: string;
+    declare createdById: string;
 
     @BelongsTo(() => User)
-    createdBy: User;
+    declare createdBy: User;
 
     @ForeignKey(() => Department)
     @Column(DataType.UUID)
-    targetDepartmentId: string;
+    declare targetDepartmentId: string;
 
     @BelongsTo(() => Department)
-    targetDepartment: Department;
+    declare targetDepartment: Department;
 
     @ForeignKey(() => Employee)
     @Column(DataType.UUID)
-    assignedToId: string;
+    declare assignedToId: string;
 
     @BelongsTo(() => Employee)
-    assignedTo: Employee;
+    declare assignedTo: Employee;
 
     @Column(DataType.DATE)
-    dueDate: Date;
+    declare dueDate: Date;
 
     @Column(DataType.DATE)
-    closedAt: Date;
+    declare closedAt: Date;
 }

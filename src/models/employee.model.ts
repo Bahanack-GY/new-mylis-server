@@ -28,34 +28,34 @@ export class Employee extends Model {
         type: DataType.UUID,
         allowNull: false,
     })
-    userId: string;
+    declare userId: string;
 
     @BelongsTo(() => User)
     declare user: User;
 
     @Column(DataType.STRING)
-    firstName: string;
+    declare firstName: string;
 
     @Column(DataType.STRING)
-    lastName: string;
+    declare lastName: string;
 
     @ForeignKey(() => Department)
     @Column(DataType.UUID)
-    departmentId: string;
+    declare departmentId: string;
 
     @BelongsTo(() => Department)
     declare department: Department;
 
     @ForeignKey(() => Position)
     @Column(DataType.UUID)
-    positionId: string;
+    declare positionId: string;
 
     @BelongsTo(() => Position)
     declare position: Position;
 
     @ForeignKey(() => Team)
     @Column(DataType.UUID)
-    teamId: string;
+    declare teamId: string;
 
     @BelongsTo(() => Team)
     declare team: Team;
@@ -64,61 +64,61 @@ export class Employee extends Model {
         type: DataType.STRING,
         unique: true,
     })
-    phoneNumber: string;
+    declare phoneNumber: string;
 
     @Column(DataType.TEXT)
-    avatarUrl: string;
+    declare avatarUrl: string;
 
     @Column(DataType.DATE)
-    hireDate: Date;
+    declare hireDate: Date;
 
     @Column(DataType.STRING)
-    address: string;
+    declare address: string;
 
     @Column(DataType.DATE)
-    birthDate: Date;
+    declare birthDate: Date;
 
     @Column(DataType.FLOAT)
-    salary: number;
+    declare salary: number;
 
     @Column({
         type: DataType.JSON,
         allowNull: true,
         defaultValue: [],
     })
-    skills: string[];
+    declare skills: string[];
 
     @Column({
         type: DataType.JSON,
         allowNull: true,
         defaultValue: [],
     })
-    educationDocs: { name: string; type: string; filePath?: string }[];
+    declare educationDocs: { name: string; type: string; filePath?: string }[];
 
     @Column({
         type: DataType.JSON,
         allowNull: true,
         defaultValue: [],
     })
-    recruitmentDocs: { name: string; type: string; filePath?: string }[];
+    declare recruitmentDocs: { name: string; type: string; filePath?: string }[];
 
     @Column({
         type: DataType.BOOLEAN,
         defaultValue: false,
     })
-    dismissed: boolean;
+    declare dismissed: boolean;
 
     @Column({
         type: DataType.DATE,
         allowNull: true,
     })
-    dismissedAt: Date | null;
+    declare dismissedAt: Date | null;
 
     @Column({
         type: DataType.INTEGER,
         defaultValue: 0,
     })
-    points: number;
+    declare points: number;
 
     @HasMany(() => Task)
     declare tasks: Task[];

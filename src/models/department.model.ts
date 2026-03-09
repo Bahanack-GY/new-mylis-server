@@ -18,33 +18,33 @@ export class Department extends Model {
         type: DataType.STRING,
         allowNull: false,
     })
-    name: string;
+    declare name: string;
 
     @Column(DataType.TEXT)
-    description: string;
+    declare description: string;
 
     @ForeignKey(() => Employee)
     @Column({
         type: DataType.UUID,
         allowNull: true,
     })
-    headId: string;
+    declare headId: string;
 
     @BelongsTo(() => Employee)
-    head: Employee;
+    declare head: Employee;
 
     @HasMany(() => Employee)
-    employees: Employee[];
+    declare employees: Employee[];
 
     @HasMany(() => Client)
-    clients: Client[];
+    declare clients: Client[];
 
     @HasMany(() => Project)
-    projects: Project[];
+    declare projects: Project[];
 
     @HasMany(() => DepartmentGoal)
-    goals: DepartmentGoal[];
+    declare goals: DepartmentGoal[];
 
     @HasMany(() => Position)
-    positions: Position[];
+    declare positions: Position[];
 }

@@ -22,26 +22,26 @@ export class DepartmentGoal extends Model {
         type: DataType.UUID,
         allowNull: false,
     })
-    departmentId: string;
+    declare departmentId: string;
 
     @Column({
         type: DataType.INTEGER,
         allowNull: false,
     })
-    year: number;
+    declare year: number;
 
     @Column({
         type: DataType.DECIMAL(15, 2),
         allowNull: false,
     })
-    targetRevenue: number;
+    declare targetRevenue: number;
 
     @Column({
         type: DataType.DECIMAL(15, 2),
         defaultValue: 0,
     })
-    currentRevenue: number;
+    declare currentRevenue: number;
 
     @BelongsTo(() => Department)
-    department: Department;
+    declare department: Department;
 }

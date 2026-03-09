@@ -16,34 +16,34 @@ export class Entretien extends Model {
         type: DataType.ENUM('ANNUEL', 'PROFESSIONNEL', 'EVALUATION', 'DISCIPLINAIRE'),
         allowNull: false,
     })
-    type: string;
+    declare type: string;
 
     @Column(DataType.STRING)
-    title: string;
+    declare title: string;
 
     @Column(DataType.DATE)
-    date: Date;
+    declare date: Date;
 
     @Column({
         type: DataType.ENUM('SCHEDULED', 'COMPLETED', 'CANCELLED'),
         defaultValue: 'SCHEDULED',
     })
-    status: string;
+    declare status: string;
 
     @Column(DataType.TEXT)
-    notes: string;
+    declare notes: string;
 
     @ForeignKey(() => Employee)
     @Column(DataType.UUID)
-    employeeId: string;
+    declare employeeId: string;
 
     @BelongsTo(() => Employee)
-    employee: Employee;
+    declare employee: Employee;
 
     @ForeignKey(() => User)
     @Column(DataType.UUID)
-    conductedByUserId: string;
+    declare conductedByUserId: string;
 
     @BelongsTo(() => User)
-    conductedBy: User;
+    declare conductedBy: User;
 }

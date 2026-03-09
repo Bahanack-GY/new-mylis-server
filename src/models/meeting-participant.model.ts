@@ -14,9 +14,9 @@ export class MeetingParticipant extends Model {
 
     @ForeignKey(() => Meeting)
     @Column(DataType.UUID)
-    meetingId: string;
+    declare meetingId: string;
 
     @ForeignKey(() => Employee)
     @Column(DataType.UUID)
-    employeeId: string;
+    declare employeeId: string;
 }

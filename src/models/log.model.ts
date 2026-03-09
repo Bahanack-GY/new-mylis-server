@@ -11,14 +11,14 @@ export class Log extends Model {
     declare id: string;
 
     @Column(DataType.STRING)
-    action: string;
+    declare action: string;
 
     @Column(DataType.STRING)
-    userId: string;
+    declare userId: string;
 
     @Column(DataType.JSON)
-    details: any;
+    declare details: any;
 
     @Column(DataType.DATE)
-    timestamp: Date;
+    declare timestamp: Date;
 }

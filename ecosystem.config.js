@@ -8,7 +8,7 @@ module.exports = {
       exec_mode: 'cluster',
       env: {
         NODE_ENV: 'production',
-        PORT: 3000,
+        PORT: 3085,
         DB_HOST: 'localhost',
         DB_PORT: 5432,
         DB_USERNAME: 'postgres',

@@ -16,40 +16,40 @@ export class Document extends Model {
         type: DataType.STRING,
         allowNull: false,
     })
-    name: string;
+    declare name: string;
 
     @Column(DataType.TEXT)
-    description: string;
+    declare description: string;
 
     @Column({
         type: DataType.STRING,
         allowNull: false,
     })
-    filePath: string;
+    declare filePath: string;
 
     @Column({
         type: DataType.STRING,
         allowNull: false,
     })
-    fileType: string;
+    declare fileType: string;
 
     @Column({
         type: DataType.ENUM('CONTRACT', 'ID', 'DIPLOMA', 'OTHER'),
         defaultValue: 'OTHER',
     })
-    category: string;
+    declare category: string;
 
     @ForeignKey(() => User)
     @Column(DataType.UUID)
-    uploadedById: string;
+    declare uploadedById: string;
 
     @BelongsTo(() => User)
-    uploadedBy: User;
+    declare uploadedBy: User;
 
     @ForeignKey(() => Employee)
     @Column(DataType.UUID)
-    employeeId: string;
+    declare employeeId: string;
 
     @BelongsTo(() => Employee)
-    employee: Employee;
+    declare employee: Employee;
 }

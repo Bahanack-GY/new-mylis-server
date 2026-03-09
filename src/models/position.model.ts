@@ -16,27 +16,27 @@ export class Position extends Model {
         type: DataType.STRING,
         allowNull: false,
     })
-    title: string;
+    declare title: string;
 
     @Column(DataType.TEXT)
-    description: string;
+    declare description: string;
 
     @Column({
         type: DataType.JSON,
         defaultValue: [],
     })
-    missions: string[];
+    declare missions: string[];
 
     @ForeignKey(() => Department)
     @Column({
         type: DataType.UUID,
         allowNull: true,
     })
-    departmentId: string;
+    declare departmentId: string;
 
     @BelongsTo(() => Department)
-    department: Department;
+    declare department: Department;
 
     @HasMany(() => Employee)
-    employees: Employee[];
+    declare employees: Employee[];
 }

@@ -18,43 +18,43 @@ export class Demand extends Model {
         allowNull: false,
         defaultValue: 0,
     })
-    totalPrice: number;
+    declare totalPrice: number;
 
     @Column(DataType.STRING)
-    proformaUrl: string;
+    declare proformaUrl: string;
 
     @Column({
         type: DataType.ENUM('BARELY', 'IMPORTANT', 'VERY_IMPORTANT', 'URGENT'),
         defaultValue: 'IMPORTANT',
     })
-    importance: string;
+    declare importance: string;
 
     @Column({
         type: DataType.ENUM('PENDING', 'VALIDATED', 'REJECTED'),
         defaultValue: 'PENDING',
     })
-    status: string;
+    declare status: string;
 
     @Column(DataType.TEXT)
-    rejectionReason: string;
+    declare rejectionReason: string;
 
     @Column(DataType.DATE)
-    validatedAt: Date;
+    declare validatedAt: Date;
 
     @ForeignKey(() => Employee)
     @Column(DataType.UUID)
-    employeeId: string;
+    declare employeeId: string;
 
     @BelongsTo(() => Employee)
-    employee: Employee;
+    declare employee: Employee;
 
     @ForeignKey(() => Department)
     @Column(DataType.UUID)
-    departmentId: string;
+    declare departmentId: string;
 
     @BelongsTo(() => Department)
-    department: Department;
+    declare department: Department;
 
     @HasMany(() => DemandItem)
-    items: DemandItem[];
+    declare items: DemandItem[];
 }

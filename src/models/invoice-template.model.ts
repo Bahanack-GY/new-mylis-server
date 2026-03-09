@@ -16,35 +16,35 @@ export class InvoiceTemplate extends Model {
         allowNull: false,
         unique: true,
     })
-    departmentId: string;
+    declare departmentId: string;
 
     @Column({
         type: DataType.STRING,
         allowNull: false,
     })
-    companyName: string;
+    declare companyName: string;
 
     @Column(DataType.STRING)
-    logoUrl: string;
+    declare logoUrl: string;
 
     @Column(DataType.TEXT)
-    address: string;
+    declare address: string;
 
     @Column(DataType.STRING)
-    phone: string;
+    declare phone: string;
 
     @Column(DataType.STRING)
-    email: string;
+    declare email: string;
 
     @Column(DataType.TEXT)
-    paymentTerms: string;
+    declare paymentTerms: string;
 
     @Column(DataType.TEXT)
-    footerText: string;
+    declare footerText: string;
 
     @Column(DataType.TEXT)
-    bankInfo: string;
+    declare bankInfo: string;
 
     @BelongsTo(() => Department)
-    department: Department;
+    declare department: Department;
 }

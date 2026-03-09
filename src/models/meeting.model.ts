@@ -17,55 +17,55 @@ export class Meeting extends Model {
         type: DataType.STRING,
         allowNull: false,
     })
-    title: string;
+    declare title: string;
 
     @Column(DataType.TEXT)
-    description: string;
+    declare description: string;
 
     @Column({
         type: DataType.ENUM('standup', 'review', 'planning', 'retrospective', 'client', 'onboarding'),
         defaultValue: 'standup',
     })
-    type: string;
+    declare type: string;
 
     @Column({
         type: DataType.ENUM('scheduled', 'in_progress', 'completed', 'cancelled'),
         defaultValue: 'scheduled',
     })
-    status: string;
+    declare status: string;
 
     @Column({
         type: DataType.DATEONLY,
         allowNull: false,
     })
-    date: string;
+    declare date: string;
 
     @Column(DataType.STRING)
-    startTime: string;
+    declare startTime: string;
 
     @Column(DataType.STRING)
-    endTime: string;
+    declare endTime: string;
 
     @Column(DataType.STRING)
-    location: string;
+    declare location: string;
 
     @ForeignKey(() => User)
     @Column(DataType.UUID)
-    organizerId: string;
+    declare organizerId: string;
 
     @BelongsTo(() => User)
-    organizer: User;
+    declare organizer: User;
 
     @Column({
         type: DataType.JSON,
         allowNull: true,
     })
-    report: {
+    declare report: {
         summary: string;
         decisions: string[];
         actionItems: { task: string; assignee: string }[];
     } | null;
 
     @BelongsToMany(() => Employee, () => MeetingParticipant)
-    participants: Employee[];
+    declare participants: Employee[];
 }

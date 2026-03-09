@@ -20,13 +20,13 @@ export class Client extends Model {
         type: DataType.STRING,
         allowNull: false,
     })
-    name: string;
+    declare name: string;
 
     @Column(DataType.TEXT)
-    projectDescription: string;
+    declare projectDescription: string;
 
     @Column(DataType.STRING) // Or DECIMAL if you prefer, but string is safer for currency sometimes if not doing math in DB
-    price: string;
+    declare price: string;
 
     @Column(DataType.STRING)
     srs: string; // Link to SRS document? Or text? Assuming string for now based on req.
@@ -39,15 +39,15 @@ export class Client extends Model {
         allowNull: false,
         defaultValue: ClientType.ONE_TIME
     })
-    type: ClientType;
+    declare type: ClientType;
 
     @ForeignKey(() => Department)
     @Column(DataType.UUID)
-    departmentId: string;
+    declare departmentId: string;
 
     @BelongsTo(() => Department)
-    department: Department;
+    declare department: Department;
 
     @HasMany(() => Project)
-    projects: Project[];
+    declare projects: Project[];
 }

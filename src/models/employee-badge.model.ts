@@ -16,7 +16,7 @@ export class EmployeeBadge extends Model {
         type: DataType.UUID,
         allowNull: false,
     })
-    employeeId: string;
+    declare employeeId: string;
 
     @BelongsTo(() => Employee)
     declare employee: Employee;
@@ -25,23 +25,23 @@ export class EmployeeBadge extends Model {
         type: DataType.INTEGER,
         allowNull: false,
     })
-    badgeNumber: number;
+    declare badgeNumber: number;
 
     @Column({
         type: DataType.STRING,
         allowNull: false,
     })
-    title: string;
+    declare title: string;
 
     @Column({
         type: DataType.INTEGER,
         allowNull: false,
     })
-    milestone: number;
+    declare milestone: number;
 
     @Column({
         type: DataType.DATE,
         defaultValue: DataType.NOW,
     })
-    earnedAt: Date;
+    declare earnedAt: Date;
 }

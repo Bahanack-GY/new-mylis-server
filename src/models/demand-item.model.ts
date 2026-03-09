@@ -22,25 +22,25 @@ export class DemandItem extends Model {
         type: DataType.STRING,
         allowNull: false,
     })
-    name: string;
+    declare name: string;
 
     @Column({
         type: DataType.INTEGER,
         allowNull: false,
         defaultValue: 1,
     })
-    quantity: number;
+    declare quantity: number;
 
     @Column({
         type: DataType.DECIMAL(12, 2),
         allowNull: false,
         defaultValue: 0,
     })
-    unitPrice: number;
+    declare unitPrice: number;
 
     @Column(DataType.STRING)
-    imageUrl: string;
+    declare imageUrl: string;
 
     @BelongsTo(() => Demand)
-    demand: Demand;
+    declare demand: Demand;
 }

@@ -16,34 +16,34 @@ export class Sanction extends Model {
         type: DataType.ENUM('AVERTISSEMENT', 'BLAME', 'MISE_A_PIED', 'LICENCIEMENT'),
         allowNull: false,
     })
-    type: string;
+    declare type: string;
 
     @Column(DataType.STRING)
-    title: string;
+    declare title: string;
 
     @Column(DataType.TEXT)
-    reason: string;
+    declare reason: string;
 
     @Column({
         type: DataType.ENUM('LEGER', 'MOYEN', 'GRAVE'),
         defaultValue: 'LEGER',
     })
-    severity: string;
+    declare severity: string;
 
     @Column(DataType.DATE)
-    date: Date;
+    declare date: Date;
 
     @ForeignKey(() => Employee)
     @Column(DataType.UUID)
-    employeeId: string;
+    declare employeeId: string;
 
     @BelongsTo(() => Employee)
-    employee: Employee;
+    declare employee: Employee;
 
     @ForeignKey(() => User)
     @Column(DataType.UUID)
-    issuedByUserId: string;
+    declare issuedByUserId: string;
 
     @BelongsTo(() => User)
-    issuedBy: User;
+    declare issuedBy: User;
 }

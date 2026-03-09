@@ -17,62 +17,62 @@ export class Task extends Model {
         type: DataType.STRING,
         allowNull: false,
     })
-    title: string;
+    declare title: string;
 
     @Column(DataType.TEXT)
-    description: string;
+    declare description: string;
 
     @Column({
         type: DataType.ENUM('CREATED', 'ASSIGNED', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED', 'REVIEWED'),
         defaultValue: 'CREATED',
     })
-    state: string;
+    declare state: string;
 
     @Column({
         type: DataType.ENUM('EASY', 'MEDIUM', 'HARD'),
         defaultValue: 'MEDIUM',
     })
-    difficulty: string;
+    declare difficulty: string;
 
     @Column(DataType.DATE)
-    startDate: Date;
+    declare startDate: Date;
 
     @Column(DataType.DATE)
-    endDate: Date;
+    declare endDate: Date;
 
     @Column(DataType.DATE)
-    dueDate: Date;
+    declare dueDate: Date;
 
     @Column(DataType.TIME)
-    startTime: string;
+    declare startTime: string;
 
     @Column(DataType.TIME)
-    endTime: string;
+    declare endTime: string;
 
     @Column(DataType.TEXT)
-    blockReason: string;
+    declare blockReason: string;
 
     @ForeignKey(() => Employee)
     @Column(DataType.UUID)
-    assignedToId: string;
+    declare assignedToId: string;
 
     @BelongsTo(() => Employee, 'assignedToId')
-    assignedTo: Employee;
+    declare assignedTo: Employee;
 
     @ForeignKey(() => Team)
     @Column(DataType.UUID)
-    assignedToTeamId: string;
+    declare assignedToTeamId: string;
 
     @BelongsTo(() => Team)
-    assignedToTeam: Team;
+    declare assignedToTeam: Team;
 
     @ForeignKey(() => Project)
     @Column(DataType.UUID)
-    projectId: string;
+    declare projectId: string;
 
     @BelongsTo(() => Project)
-    project: Project;
+    declare project: Project;
 
     @Column({ type: DataType.UUID, allowNull: true })
-    ticketId: string;
+    declare ticketId: string;
 }

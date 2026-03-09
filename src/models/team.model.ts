@@ -15,15 +15,15 @@ export class Team extends Model {
         type: DataType.STRING,
         allowNull: false,
     })
-    name: string;
+    declare name: string;
 
     @ForeignKey(() => Employee)
     @Column(DataType.UUID)
-    leadId: string;
+    declare leadId: string;
 
     @BelongsTo(() => Employee, 'leadId')
-    lead: Employee;
+    declare lead: Employee;
 
     @HasMany(() => Employee, 'teamId')
-    members: Employee[];
+    declare members: Employee[];
 }

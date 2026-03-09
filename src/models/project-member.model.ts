@@ -6,9 +6,9 @@ import { Employee } from './employee.model';
 export class ProjectMember extends Model {
     @ForeignKey(() => Project)
     @Column(DataType.UUID)
-    projectId: string;
+    declare projectId: string;
 
     @ForeignKey(() => Employee)
     @Column(DataType.UUID)
-    employeeId: string;
+    declare employeeId: string;
 }

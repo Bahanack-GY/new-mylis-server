@@ -15,30 +15,30 @@ export class Notification extends Model {
         type: DataType.STRING,
         allowNull: false,
     })
-    title: string;
+    declare title: string;
 
     @Column(DataType.TEXT)
-    body: string;
+    declare body: string;
 
     @Column({
         type: DataType.ENUM('system', 'task', 'project', 'meeting', 'document', 'ticket', 'sanction', 'chat', 'demand', 'message'),
         defaultValue: 'system',
     })
-    type: string;
+    declare type: string;
 
     @Column({
         type: DataType.BOOLEAN,
         defaultValue: false,
     })
-    read: boolean;
+    declare read: boolean;
 
     @ForeignKey(() => User)
     @Column({
         type: DataType.UUID,
         allowNull: false,
     })
-    userId: string;
+    declare userId: string;
 
     @BelongsTo(() => User)
-    user: User;
+    declare user: User;
 }
