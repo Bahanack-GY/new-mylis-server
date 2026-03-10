@@ -31,7 +31,7 @@ module.exports = {
       listen_timeout: 3000,
       // Health check settings
       min_uptime: '10s',
-      max_restarts: 10,
+      max_restarts: 50,
     },
   ],
 };

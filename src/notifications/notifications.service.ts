@@ -24,7 +24,7 @@ export class NotificationsService {
         this.pushCallback = cb;
     }
 
-    async create(data: { title: string; body: string; type: string; userId: string }) {
+    async create(data: { title: string; body: string; type: string; userId: string; meta?: Record<string, unknown> }) {
         const notif = await this.notificationModel.create(data);
         this.pushCallback?.(data.userId, { title: data.title, body: data.body, type: data.type });
 
@@ -38,7 +38,7 @@ export class NotificationsService {
         return notif;
     }
 
-    async createMany(notifications: { title: string; body: string; type: string; userId: string }[]) {
+    async createMany(notifications: { title: string; body: string; type: string; userId: string; meta?: Record<string, unknown> }[]) {
         const result = await this.notificationModel.bulkCreate(notifications);
 
         for (const n of notifications) {

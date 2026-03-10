@@ -127,6 +127,10 @@ export class AuthService {
         const employee = await this.employeeModel.findOne({ where: { userId } });
         if (!employee) return null;
 
+        if (dto.email) {
+            await this.usersService.updateEmail(userId, dto.email);
+        }
+
         const allowed: Record<string, any> = {};
         if (dto.firstName !== undefined) allowed.firstName = dto.firstName;
         if (dto.lastName !== undefined) allowed.lastName = dto.lastName;

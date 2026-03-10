@@ -186,6 +186,7 @@ export class ChatGateway
           body: preview || 'Sent an attachment',
           type: 'message',
           userId,
+          meta: { channelId: data.channelId },
         })),
       );
     }
@@ -200,6 +201,7 @@ export class ChatGateway
             body: preview,
             type: 'chat',
             userId,
+            meta: { channelId: data.channelId },
           })),
         );
       }

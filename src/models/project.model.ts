@@ -26,6 +26,9 @@ export class Project extends Model {
     @Column(DataType.FLOAT)
     declare budget: number;
 
+    @Column(DataType.FLOAT)
+    declare revenue: number;
+
     @Column(DataType.DATE)
     declare startDate: Date;
 

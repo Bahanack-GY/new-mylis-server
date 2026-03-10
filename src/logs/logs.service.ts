@@ -32,7 +32,7 @@ export class LogsService {
         const logs = await this.logModel.findAll({
             where,
             order: [['timestamp', 'DESC']],
-            limit: 500,
+            limit: 200,
         });
 
         if (logs.length === 0) return [];
@@ -74,6 +74,14 @@ export class LogsService {
                 email: details.userEmail || null,
                 role: details.userRole || null,
                 employee: null,
+            };
+
+            // Strip details to only the fields the frontend needs
+            json.details = {
+                ...(details.entity !== undefined && { entity: details.entity }),
+                ...(details.target !== undefined && { target: details.target }),
+                ...(details.userEmail !== undefined && { userEmail: details.userEmail }),
+                ...(details.userRole !== undefined && { userRole: details.userRole }),
             };
 
             return json;

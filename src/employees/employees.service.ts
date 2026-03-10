@@ -95,7 +95,14 @@ export class EmployeesService {
     }
 
     async update(id: string, updateEmployeeDto: any): Promise<[number, Employee[]]> {
-        return this.employeeModel.update(updateEmployeeDto, {
+        const { email, ...employeeFields } = updateEmployeeDto;
+        if (email) {
+            const employee = await this.employeeModel.findByPk(id);
+            if (employee?.userId) {
+                await this.usersService.updateEmail(employee.userId, email);
+            }
+        }
+        return this.employeeModel.update(employeeFields, {
             where: { id },
             returning: true,
         });

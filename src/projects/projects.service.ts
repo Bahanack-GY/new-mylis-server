@@ -126,7 +126,7 @@ export class ProjectsService {
     async findByDepartmentForEmployee(departmentId: string) {
         return this.projectModel.findAll({
             where: { departmentId },
-            attributes: { exclude: ['budget', 'clientId'] },
+            attributes: { exclude: ['budget', 'revenue', 'clientId'] },
             include: [
                 { model: Department, attributes: ['id', 'name'] },
                 { model: Employee, through: { attributes: [] }, attributes: ['id', 'firstName', 'lastName', 'avatarUrl'] },
@@ -137,7 +137,7 @@ export class ProjectsService {
 
     async findOneForEmployee(id: string) {
         return this.projectModel.findByPk(id, {
-            attributes: { exclude: ['budget', 'clientId'] },
+            attributes: { exclude: ['budget', 'revenue', 'clientId'] },
             include: [
                 { model: Department, attributes: ['id', 'name'] },
                 { model: Employee, through: { attributes: [] }, attributes: ['id', 'firstName', 'lastName', 'avatarUrl'] },

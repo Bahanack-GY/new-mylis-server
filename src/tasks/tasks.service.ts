@@ -214,6 +214,25 @@ export class TasksService {
         return { task: updatedTask, gamification };
     }
 
+    async selfAssign(userId: string, dto: any): Promise<Task> {
+        const employee = await this.employeeModel.findOne({ where: { userId } });
+        if (!employee) throw new NotFoundException('Employee not found');
+
+        const task = await this.taskModel.create({
+            ...dto,
+            assignedToId: employee.id,
+            selfAssigned: true,
+            state: 'IN_PROGRESS',
+        });
+
+        return task.reload({
+            include: [
+                { model: Employee, as: 'assignedTo' },
+                { model: Project },
+            ],
+        });
+    }
+
     async findByEmployee(employeeId: string): Promise<Task[]> {
         return this.taskModel.findAll({
             where: { assignedToId: employeeId },

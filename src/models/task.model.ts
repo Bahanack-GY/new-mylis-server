@@ -75,4 +75,7 @@ export class Task extends Model {
 
     @Column({ type: DataType.UUID, allowNull: true })
     declare ticketId: string;
+
+    @Column({ type: DataType.BOOLEAN, defaultValue: false })
+    declare selfAssigned: boolean;
 }

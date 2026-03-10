@@ -32,6 +32,12 @@ export class Notification extends Model {
     })
     declare read: boolean;
 
+    @Column({
+        type: DataType.JSONB,
+        allowNull: true,
+    })
+    declare meta: Record<string, unknown> | null;
+
     @ForeignKey(() => User)
     @Column({
         type: DataType.UUID,

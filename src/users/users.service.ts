@@ -27,6 +27,10 @@ export class UsersService {
         return this.userModel.findByPk(id);
     }
 
+    async updateEmail(userId: string, email: string): Promise<void> {
+        await this.userModel.update({ email }, { where: { id: userId } });
+    }
+
     async create(userData: { email: string; password: string; role?: string; firstName?: string; lastName?: string }): Promise<User> {
         const salt = await bcrypt.genSalt();
         const passwordHash = await bcrypt.hash(userData.password, salt);
