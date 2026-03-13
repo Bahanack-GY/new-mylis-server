@@ -78,4 +78,13 @@ export class Task extends Model {
 
     @Column({ type: DataType.BOOLEAN, defaultValue: false })
     declare selfAssigned: boolean;
+
+    @Column({ type: DataType.UUID, allowNull: true })
+    declare createdByUserId: string | null;
+
+    @Column({ type: DataType.DATE, allowNull: true })
+    declare startedAt: Date | null;
+
+    @Column({ type: DataType.DATE, allowNull: true })
+    declare completedAt: Date | null;
 }

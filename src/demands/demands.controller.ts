@@ -60,7 +60,7 @@ export class DemandsController {
         return this.demandsService.create(createDemandDto, req.user.userId);
     }
 
-    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT')
+    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'ACCOUNTANT')
     @Get()
     findAll(@Query('departmentId') departmentId: string, @Request() req) {
         const deptId = req.user.role === 'HEAD_OF_DEPARTMENT' ? req.user.departmentId : departmentId;
@@ -73,7 +73,7 @@ export class DemandsController {
         return this.demandsService.findByEmployee(req.user.userId);
     }
 
-    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT')
+    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'ACCOUNTANT')
     @Get('stats')
     getStats(
         @Query('departmentId') departmentId: string,
@@ -85,19 +85,19 @@ export class DemandsController {
         return this.demandsService.getStats(deptId, from, to);
     }
 
-    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT')
+    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'ACCOUNTANT')
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.demandsService.findOne(id);
     }
 
-    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT')
+    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'ACCOUNTANT')
     @Patch(':id/validate')
     validate(@Param('id') id: string) {
         return this.demandsService.validate(id);
     }
 
-    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT')
+    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'ACCOUNTANT')
     @Patch(':id/reject')
     reject(@Param('id') id: string, @Body() body: { reason?: string }) {
         return this.demandsService.reject(id, body.reason);

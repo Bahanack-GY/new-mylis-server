@@ -1,5 +1,5 @@
 
-import { Controller, Get, Post, Body, Param, UseGuards, Request, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, UseGuards, Request, UseInterceptors, UploadedFile, BadRequestException, NotFoundException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
@@ -13,7 +13,7 @@ const ALLOWED_FOLDERS = ['formation', 'recruitment', 'contracts', 'general', 'ed
 const ALLOWED_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.doc', '.docx', '.webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024; // 5GB
 
-@Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'EMPLOYEE')
+@Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'EMPLOYEE', 'ACCOUNTANT')
 @Controller('hr/documents')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class DocumentsController {
@@ -56,7 +56,7 @@ export class DocumentsController {
             throw new BadRequestException(`Invalid folder: ${folder}`);
         }
         return {
-            filePath: file.path,
+            filePath: `uploads/${folder}/${file.filename}`,
             fileName: file.originalname,
             fileType: file.mimetype,
             size: file.size,
@@ -90,5 +90,16 @@ export class DocumentsController {
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.documentsService.findOne(id);
+    }
+
+    @Delete(':id')
+    async remove(@Param('id') id: string, @Request() req) {
+        const doc = await this.documentsService.findOne(id);
+        if (!doc) throw new NotFoundException('Document not found');
+        const { role, userId } = req.user;
+        if (role !== 'MANAGER' && role !== 'HEAD_OF_DEPARTMENT' && doc.uploadedById !== userId) {
+            throw new BadRequestException('You can only delete your own documents');
+        }
+        return this.documentsService.remove(id);
     }
 }

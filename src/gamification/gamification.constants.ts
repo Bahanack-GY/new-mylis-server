@@ -1,12 +1,20 @@
 
 export const POINTS_BY_DIFFICULTY: Record<string, number> = {
-    EASY: 10,
-    MEDIUM: 20,
-    HARD: 40,
+    EASY: 5,
+    MEDIUM: 10,
+    HARD: 15,
 };
 
-export const ON_TIME_BONUS = 5;
-export const EARLY_BONUS = 10;
+// Speed bonuses (days between completedAt and dueDate)
+export const SPEED_BONUS_LIGHTNING = 5; // completed 5+ days early
+export const SPEED_BONUS_EARLY = 3;     // completed 2–4 days early
+export const SPEED_BONUS_ONTIME = 1;    // completed 0–1 days early (on time)
+export const SPEED_PENALTY_LATE = 3;    // completed 3+ days late (deducted, min 1 net)
+
+// Weekly streak bonuses — triggered at exact weekly task counts
+export const STREAK_BONUS_3 = 5;   // 3rd task completed this week
+export const STREAK_BONUS_5 = 8;   // 5th task completed this week
+export const STREAK_BONUS_7 = 12;  // 7th task completed this week
 
 export interface BadgeDefinition {
     badgeNumber: number;

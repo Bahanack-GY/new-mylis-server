@@ -1,5 +1,5 @@
 
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request, BadRequestException } from '@nestjs/common';
 import { EmployeesService } from './employees.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Roles } from '../auth/roles.decorator';
@@ -17,6 +17,7 @@ export class EmployeesController {
         return this.employeesService.create(createEmployeeDto);
     }
 
+    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'ACCOUNTANT')
     @Get()
     findAll(@Query('departmentId') departmentId: string, @Request() req) {
         const deptId = req.user.role === 'HEAD_OF_DEPARTMENT' ? req.user.departmentId : departmentId;
@@ -35,14 +36,23 @@ export class EmployeesController {
         return this.employeesService.getTodayBirthdays();
     }
 
+    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'ACCOUNTANT')
     @Get(':id/stats')
     getStats(@Param('id') id: string) {
         return this.employeesService.getEmployeeStats(id);
     }
 
+    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'ACCOUNTANT')
     @Get(':id/badges')
     getBadges(@Param('id') id: string) {
         return this.employeesService.getEmployeeBadges(id);
+    }
+
+    @Patch(':id/password')
+    async changePassword(@Param('id') id: string, @Body('password') password: string) {
+        if (!password || password.length < 6) throw new BadRequestException('Password must be at least 6 characters');
+        await this.employeesService.changeEmployeePassword(id, password);
+        return { message: 'Password updated successfully' };
     }
 
     @Patch(':id/dismiss')
@@ -55,6 +65,7 @@ export class EmployeesController {
         return this.employeesService.reinstate(id);
     }
 
+    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'ACCOUNTANT')
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.employeesService.findOne(id);

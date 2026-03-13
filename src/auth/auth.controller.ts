@@ -1,11 +1,12 @@
 
-import { Controller, Request, Post, UseGuards, Body, Get, Patch } from '@nestjs/common';
+import { Controller, Request, Post, UseGuards, Body, Get, Patch, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
+import { UsersService } from '../users/users.service';
 
 @Controller('auth')
 export class AuthController {
-    constructor(private authService: AuthService) { }
+    constructor(private authService: AuthService, private usersService: UsersService) { }
 
     @UseGuards(AuthGuard('local'))
     @Post('login')
@@ -42,5 +43,16 @@ export class AuthController {
     @Patch('profile')
     updateProfile(@Request() req, @Body() dto: any) {
         return this.authService.updateProfile(req.user.userId, dto);
+    }
+
+    @UseGuards(AuthGuard('jwt'))
+    @Patch('change-password')
+    async changePassword(@Request() req, @Body() body: { currentPassword: string; newPassword: string }) {
+        if (!body.currentPassword || !body.newPassword) throw new BadRequestException('currentPassword and newPassword are required');
+        if (body.newPassword.length < 6) throw new BadRequestException('New password must be at least 6 characters');
+        const valid = await this.usersService.verifyPassword(req.user.userId, body.currentPassword);
+        if (!valid) throw new UnauthorizedException('Current password is incorrect');
+        await this.usersService.changePassword(req.user.userId, body.newPassword);
+        return { message: 'Password changed successfully' };
     }
 }

@@ -21,4 +21,16 @@ export class PositionsService {
     findOne(id: string) {
         return this.positionModel.findByPk(id);
     }
+
+    async update(id: string, dto: any) {
+        const pos = await this.positionModel.findByPk(id);
+        if (!pos) return null;
+        await pos.update(dto);
+        return pos;
+    }
+
+    async remove(id: string) {
+        const pos = await this.positionModel.findByPk(id);
+        if (pos) await pos.destroy();
+    }
 }

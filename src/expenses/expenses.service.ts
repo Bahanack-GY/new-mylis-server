@@ -20,10 +20,23 @@ export class ExpensesService {
         return this.expenseModel.create(createExpenseDto);
     }
 
-    async findAll() {
-        return this.expenseModel.findAll({
+    async findAll(projectId?: string, page = 1, limit = 10) {
+        const where: any = {};
+        if (projectId) where.projectId = projectId;
+        const offset = (page - 1) * limit;
+        const { count, rows } = await this.expenseModel.findAndCountAll({
+            where,
+            include: [{ model: Project, attributes: ['id', 'name'], required: false }],
             order: [['date', 'DESC'], ['createdAt', 'DESC']],
+            limit,
+            offset,
         });
+        return {
+            data: rows,
+            total: count,
+            page,
+            totalPages: Math.ceil(count / limit),
+        };
     }
 
     async findOne(id: string) {

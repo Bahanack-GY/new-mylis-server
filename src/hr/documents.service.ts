@@ -88,6 +88,13 @@ export class DocumentsService {
         });
     }
 
+    async remove(id: string) {
+        const doc = await this.documentModel.findByPk(id);
+        if (!doc) return null;
+        await doc.destroy();
+        return { success: true };
+    }
+
     findByUser(userId: string) {
         return this.documentModel.findAll({
             where: { uploadedById: userId },

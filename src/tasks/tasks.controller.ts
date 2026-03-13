@@ -13,8 +13,8 @@ export class TasksController {
     constructor(private readonly tasksService: TasksService) { }
 
     @Post()
-    create(@Body() createTaskDto: any) {
-        return this.tasksService.create(createTaskDto);
+    create(@Body() createTaskDto: any, @Request() req) {
+        return this.tasksService.create(createTaskDto, req.user.userId);
     }
 
     @Get()
@@ -39,18 +39,27 @@ export class TasksController {
         return this.tasksService.findByEmployee(employeeId);
     }
 
+    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'EMPLOYEE')
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.tasksService.findOne(id);
     }
 
+    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'EMPLOYEE')
     @Patch(':id')
-    update(@Param('id') id: string, @Body() updateTaskDto: any) {
-        return this.tasksService.update(id, updateTaskDto);
+    update(@Param('id') id: string, @Body() updateTaskDto: any, @Request() req) {
+        return this.tasksService.updateByUser(id, req.user.userId, req.user.role, updateTaskDto);
     }
 
+    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'EMPLOYEE')
     @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.tasksService.remove(id);
+    remove(@Param('id') id: string, @Request() req) {
+        return this.tasksService.removeByUser(id, req.user.userId, req.user.role);
+    }
+
+    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'EMPLOYEE')
+    @Get(':id/history')
+    getHistory(@Param('id') id: string) {
+        return this.tasksService.getHistory(id);
     }
 }

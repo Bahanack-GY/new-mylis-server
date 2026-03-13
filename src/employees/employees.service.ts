@@ -94,6 +94,12 @@ export class EmployeesService {
         return employee;
     }
 
+    async changeEmployeePassword(id: string, newPassword: string): Promise<void> {
+        const employee = await this.employeeModel.findByPk(id);
+        if (!employee?.userId) throw new Error('Employee user not found');
+        await this.usersService.changePassword(employee.userId, newPassword);
+    }
+
     async update(id: string, updateEmployeeDto: any): Promise<[number, Employee[]]> {
         const { email, ...employeeFields } = updateEmployeeDto;
         if (email) {

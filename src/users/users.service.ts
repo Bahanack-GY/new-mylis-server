@@ -31,6 +31,18 @@ export class UsersService {
         await this.userModel.update({ email }, { where: { id: userId } });
     }
 
+    async changePassword(userId: string, newPassword: string): Promise<void> {
+        const salt = await bcrypt.genSalt();
+        const passwordHash = await bcrypt.hash(newPassword, salt);
+        await this.userModel.update({ passwordHash }, { where: { id: userId } });
+    }
+
+    async verifyPassword(userId: string, password: string): Promise<boolean> {
+        const user = await this.userModel.findByPk(userId);
+        if (!user) return false;
+        return bcrypt.compare(password, user.passwordHash);
+    }
+
     async create(userData: { email: string; password: string; role?: string; firstName?: string; lastName?: string }): Promise<User> {
         const salt = await bcrypt.genSalt();
         const passwordHash = await bcrypt.hash(userData.password, salt);

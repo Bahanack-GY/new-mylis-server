@@ -2,6 +2,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Task } from '../models/task.model';
+import { TaskHistory } from '../models/task-history.model';
 import { Employee } from '../models/employee.model';
 import { Ticket } from '../models/ticket.model';
 import { Department } from '../models/department.model';
@@ -21,6 +22,8 @@ export class TasksService {
     constructor(
         @InjectModel(Task)
         private taskModel: typeof Task,
+        @InjectModel(TaskHistory)
+        private taskHistoryModel: typeof TaskHistory,
         @InjectModel(Employee)
         private employeeModel: typeof Employee,
         @InjectModel(Ticket)
@@ -31,8 +34,8 @@ export class TasksService {
         private gamificationService: GamificationService,
     ) { }
 
-    async create(createTaskDto: any): Promise<Task> {
-        const task = await this.taskModel.create(createTaskDto);
+    async create(createTaskDto: any, createdByUserId?: string): Promise<Task> {
+        const task = await this.taskModel.create({ ...createTaskDto, createdByUserId: createdByUserId || null });
 
         // Notify assigned employee about new task
         if (createTaskDto.assignedToId) {
@@ -83,8 +86,154 @@ export class TasksService {
     async remove(id: string): Promise<void> {
         const task = await this.findOne(id);
         if (task) {
+            await this.taskHistoryModel.destroy({ where: { taskId: id } });
             await task.destroy();
         }
+    }
+
+    async updateByUser(id: string, userId: string, role: string, dto: any): Promise<Task> {
+        const task = await this.taskModel.findByPk(id, {
+            include: [{ model: Employee, as: 'assignedTo' }],
+        });
+        if (!task) throw new NotFoundException('Task not found');
+
+        const selfAssigned = task.getDataValue('selfAssigned');
+        const isManagerOrHod = role === 'MANAGER' || role === 'HEAD_OF_DEPARTMENT';
+        const isEmployee = role === 'EMPLOYEE';
+
+        if (selfAssigned && isManagerOrHod) throw new ForbiddenException('Cannot edit a self-assigned task');
+        if (!selfAssigned && isEmployee) throw new ForbiddenException('Cannot edit a task assigned by management');
+
+        if (isEmployee) {
+            const employee = await this.employeeModel.findOne({ where: { userId } });
+            if (!employee || task.getDataValue('assignedToId') !== employee.id) {
+                throw new ForbiddenException('Not your task');
+            }
+        }
+
+        const editableFields = ['title', 'description', 'difficulty', 'startDate', 'endDate', 'dueDate', 'startTime'];
+        const changes: Record<string, { from: any; to: any }> = {};
+        for (const field of editableFields) {
+            if (dto[field] !== undefined && dto[field] !== task.getDataValue(field)) {
+                changes[field] = { from: task.getDataValue(field), to: dto[field] };
+            }
+        }
+
+        if (Object.keys(changes).length > 0) {
+            let changedByName = userId;
+            if (isManagerOrHod) {
+                changedByName = `Manager (${role})`;
+            } else {
+                const employee = await this.employeeModel.findOne({ where: { userId } });
+                if (employee) changedByName = `${employee.getDataValue('firstName')} ${employee.getDataValue('lastName')}`;
+            }
+
+            await this.taskHistoryModel.create({
+                taskId: id,
+                changedByUserId: userId,
+                changedByName,
+                changes,
+            });
+
+            const taskTitle = task.getDataValue('title');
+            if (isManagerOrHod) {
+                const assignedTo = task.get('assignedTo') as any;
+                const empUserId = assignedTo?.userId || assignedTo?.getDataValue?.('userId');
+                if (empUserId) {
+                    await this.notificationsService.create({
+                        title: 'Task updated',
+                        body: `Your task "${taskTitle}" has been updated by management.`,
+                        type: 'task',
+                        userId: empUserId,
+                    });
+                }
+            } else {
+                const employee = await this.employeeModel.findOne({ where: { userId } });
+                const deptId = employee?.getDataValue('departmentId');
+                if (deptId) {
+                    const dept = await this.departmentModel.findByPk(deptId, {
+                        include: [{ model: Employee, as: 'head' }],
+                    });
+                    const hodUserId = dept?.getDataValue('head')?.getDataValue('userId');
+                    if (hodUserId) {
+                        const empName = `${employee!.getDataValue('firstName')} ${employee!.getDataValue('lastName')}`;
+                        await this.notificationsService.create({
+                            title: 'Task edited',
+                            body: `${empName} edited their task "${taskTitle}".`,
+                            type: 'task',
+                            userId: hodUserId,
+                        });
+                    }
+                }
+            }
+        }
+
+        await task.update(dto);
+        return task.reload({ include: [{ model: Employee, as: 'assignedTo' }, Project] });
+    }
+
+    async removeByUser(id: string, userId: string, role: string): Promise<void> {
+        const task = await this.taskModel.findByPk(id, {
+            include: [{ model: Employee, as: 'assignedTo' }],
+        });
+        if (!task) throw new NotFoundException('Task not found');
+
+        const selfAssigned = task.getDataValue('selfAssigned');
+        const isManagerOrHod = role === 'MANAGER' || role === 'HEAD_OF_DEPARTMENT';
+        const isEmployee = role === 'EMPLOYEE';
+
+        if (selfAssigned && isManagerOrHod) throw new ForbiddenException('Cannot delete a self-assigned task');
+        if (!selfAssigned && isEmployee) throw new ForbiddenException('Cannot delete a task assigned by management');
+
+        if (isEmployee) {
+            const employee = await this.employeeModel.findOne({ where: { userId } });
+            if (!employee || task.getDataValue('assignedToId') !== employee.id) {
+                throw new ForbiddenException('Not your task');
+            }
+        }
+
+        const taskTitle = task.getDataValue('title');
+
+        if (isManagerOrHod) {
+            const assignedTo = task.get('assignedTo') as any;
+            const empUserId = assignedTo?.userId || assignedTo?.getDataValue?.('userId');
+            if (empUserId) {
+                await this.notificationsService.create({
+                    title: 'Task deleted',
+                    body: `Your task "${taskTitle}" has been deleted by management.`,
+                    type: 'task',
+                    userId: empUserId,
+                });
+            }
+        } else {
+            const employee = await this.employeeModel.findOne({ where: { userId } });
+            const deptId = employee?.getDataValue('departmentId');
+            if (deptId) {
+                const dept = await this.departmentModel.findByPk(deptId, {
+                    include: [{ model: Employee, as: 'head' }],
+                });
+                const hodUserId = dept?.getDataValue('head')?.getDataValue('userId');
+                if (hodUserId) {
+                    const empName = `${employee!.getDataValue('firstName')} ${employee!.getDataValue('lastName')}`;
+                    await this.notificationsService.create({
+                        title: 'Task deleted',
+                        body: `${empName} deleted their task "${taskTitle}".`,
+                        type: 'task',
+                        userId: hodUserId,
+                    });
+                }
+            }
+        }
+
+        await this.taskHistoryModel.destroy({ where: { taskId: id } });
+        await task.destroy();
+    }
+
+    async getHistory(id: string): Promise<TaskHistory[]> {
+        return this.taskHistoryModel.findAll({
+            where: { taskId: id },
+            order: [['createdAt', 'DESC']],
+        });
     }
 
     async findByProject(projectId: string): Promise<Task[]> {
@@ -113,6 +262,12 @@ export class TasksService {
         if (task.getDataValue('assignedToId') !== employee.id) throw new ForbiddenException('Not your task');
 
         task.set('state', state);
+        if (state === 'IN_PROGRESS' && !task.getDataValue('startedAt')) {
+            task.set('startedAt', new Date());
+        }
+        if (state === 'COMPLETED' && !task.getDataValue('completedAt')) {
+            task.set('completedAt', new Date());
+        }
         if (state === 'BLOCKED' && blockReason) {
             task.set('blockReason', blockReason);
         } else if (state !== 'BLOCKED') {
