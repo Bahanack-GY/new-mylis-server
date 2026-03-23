@@ -1,7 +1,7 @@
 
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import { Op } from 'sequelize';
+import { Op, Transaction } from 'sequelize';
 import { Employee } from '../models/employee.model';
 import { EmployeeBadge } from '../models/employee-badge.model';
 import { Task } from '../models/task.model';
@@ -43,7 +43,7 @@ export class GamificationService {
         private taskModel: typeof Task,
     ) { }
 
-    async processTaskCompletion(employeeId: string, task: Task): Promise<GamificationResult> {
+    async processTaskCompletion(employeeId: string, task: Task, transaction?: Transaction): Promise<GamificationResult> {
         // 1. Base points by difficulty
         const difficulty = task.getDataValue('difficulty') || 'MEDIUM';
         const base = POINTS_BY_DIFFICULTY[difficulty] ?? 10;
@@ -85,6 +85,7 @@ export class GamificationService {
                 state: 'COMPLETED',
                 completedAt: { [Op.gte]: weekAgo },
             },
+            transaction,
         });
 
         let streakBonus = 0;
@@ -99,14 +100,15 @@ export class GamificationService {
         pointsEarned += streakBonus;
 
         // 4. Update employee points
-        const employee = await this.employeeModel.findByPk(employeeId);
+        const employee = await this.employeeModel.findByPk(employeeId, { transaction });
         const currentPoints = employee?.getDataValue('points') || 0;
         const newTotal = currentPoints + pointsEarned;
-        await employee?.update({ points: newTotal });
+        await employee?.update({ points: newTotal }, { transaction });
 
         // 5. Badge milestone check (by total completed tasks)
         const completedCount = await this.taskModel.count({
             where: { assignedToId: employeeId, state: 'COMPLETED' },
+            transaction,
         });
 
         let newBadge: GamificationResult['newBadge'] = undefined;
@@ -114,6 +116,7 @@ export class GamificationService {
         if (badgeDef) {
             const existing = await this.employeeBadgeModel.findOne({
                 where: { employeeId, badgeNumber: badgeDef.badgeNumber },
+                transaction,
             });
             if (!existing) {
                 await this.employeeBadgeModel.create({
@@ -121,7 +124,7 @@ export class GamificationService {
                     badgeNumber: badgeDef.badgeNumber,
                     title: badgeDef.title,
                     milestone: badgeDef.milestone,
-                });
+                }, { transaction });
                 newBadge = {
                     badgeNumber: badgeDef.badgeNumber,
                     title: badgeDef.title,

@@ -1,22 +1,28 @@
 
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/sequelize';
+import { InjectModel, InjectConnection } from '@nestjs/sequelize';
 import { Ticket } from '../models/ticket.model';
+import { Task } from '../models/task.model';
 import { User } from '../models/user.model';
 import { Department } from '../models/department.model';
 import { Employee } from '../models/employee.model';
 import { TasksService } from '../tasks/tasks.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { Sequelize } from 'sequelize-typescript';
 
 @Injectable()
 export class TicketsService {
     constructor(
         @InjectModel(Ticket)
         private ticketModel: typeof Ticket,
+        @InjectModel(Task)
+        private taskModel: typeof Task,
         @InjectModel(Employee)
         private employeeModel: typeof Employee,
         @InjectModel(Department)
         private departmentModel: typeof Department,
+        @InjectConnection()
+        private sequelize: Sequelize,
         private tasksService: TasksService,
         private notificationsService: NotificationsService,
     ) { }
@@ -71,24 +77,60 @@ export class TicketsService {
         const ticket = await this.ticketModel.findByPk(id);
         if (!ticket) return null;
 
+        // Idempotent: same employee already assigned
+        if (ticket.getDataValue('status') === 'ACCEPTED' && ticket.getDataValue('assignedToId') === employeeId) {
+            return this.findOne(id);
+        }
+
+        // Prevent double-assignment race condition
+        if (ticket.getDataValue('status') !== 'OPEN') {
+            throw new BadRequestException('Ticket is no longer open');
+        }
+
         const ticketTitle = ticket.getDataValue('title');
 
-        await this.ticketModel.update(
-            { assignedToId: employeeId, status: 'ACCEPTED' },
-            { where: { id } },
-        );
+        // Atomically update ticket status and create the linked task
+        let taskCreated = false;
+        await this.sequelize.transaction(async (t) => {
+            await this.ticketModel.update(
+                { assignedToId: employeeId, status: 'ACCEPTED' },
+                { where: { id }, transaction: t },
+            );
 
-        await this.tasksService.create({
-            title: `[Ticket] ${ticketTitle}`,
-            description: ticket.getDataValue('description') || '',
-            state: 'ASSIGNED',
-            difficulty: 'MEDIUM',
-            assignedToId: employeeId,
-            startDate: new Date(),
-            ticketId: id,
+            const existingTask = await this.taskModel.findOne({
+                where: { ticketId: id },
+                transaction: t,
+            });
+            if (!existingTask) {
+                await this.taskModel.create({
+                    title: `[Ticket] ${ticketTitle}`,
+                    description: ticket.getDataValue('description') || '',
+                    state: 'ASSIGNED',
+                    difficulty: 'MEDIUM',
+                    assignedToId: employeeId,
+                    startDate: new Date(),
+                    ticketId: id,
+                }, { transaction: t });
+                taskCreated = true;
+            }
         });
 
-        // Get employee name for notification
+        // Notify assigned employee after commit
+        if (taskCreated) {
+            const employee = await this.employeeModel.findByPk(employeeId);
+            if (employee?.getDataValue('userId')) {
+                await this.notificationsService.create({
+                    title: 'New task assigned',
+                    body: `You have been assigned a new task: "[Ticket] ${ticketTitle}"`,
+                    titleFr: 'Nouvelle tâche assignée',
+                    bodyFr: `Une nouvelle tâche vous a été assignée : "[Ticket] ${ticketTitle}"`,
+                    type: 'task',
+                    userId: employee.getDataValue('userId'),
+                });
+            }
+        }
+
+        // Get employee name for ticket notification
         const employee = await this.employeeModel.findByPk(employeeId);
         const empName = employee
             ? `${employee.getDataValue('firstName')} ${employee.getDataValue('lastName')}`
@@ -109,15 +151,23 @@ export class TicketsService {
             IN_PROGRESS: 'started working on',
             COMPLETED: 'completed',
         };
+        const STATUS_LABELS_FR: Record<string, string> = {
+            ACCEPTED: 'accepté',
+            IN_PROGRESS: 'commencé à traiter',
+            COMPLETED: 'résolu',
+        };
         const action = STATUS_LABELS[status] || status.toLowerCase();
+        const actionFr = STATUS_LABELS_FR[status] || status.toLowerCase();
 
-        const notifications: { title: string; body: string; type: string; userId: string }[] = [];
+        const notifications: { title: string; body: string; titleFr?: string; bodyFr?: string; type: string; userId: string }[] = [];
 
         // Notify ticket creator
         if (creatorId) {
             notifications.push({
                 title: `Ticket ${status.toLowerCase()}: ${ticketTitle}`,
                 body: `${employeeName} has ${action} your ticket "${ticketTitle}".`,
+                titleFr: `Ticket ${status.toLowerCase()} : ${ticketTitle}`,
+                bodyFr: `${employeeName} a ${actionFr} votre ticket "${ticketTitle}".`,
                 type: 'ticket',
                 userId: creatorId,
             });
@@ -134,6 +184,8 @@ export class TicketsService {
                 notifications.push({
                     title: `Ticket ${status.toLowerCase()}: ${ticketTitle}`,
                     body: `${employeeName} has ${action} the ticket "${ticketTitle}".`,
+                    titleFr: `Ticket ${status.toLowerCase()} : ${ticketTitle}`,
+                    bodyFr: `${employeeName} a ${actionFr} le ticket "${ticketTitle}".`,
                     type: 'ticket',
                     userId: hodUserId,
                 });
@@ -185,6 +237,12 @@ export class TicketsService {
     }
 
     async close(id: string) {
+        const ticket = await this.ticketModel.findByPk(id);
+        if (!ticket) throw new NotFoundException('Ticket not found');
+        // Idempotent: already closed
+        if (ticket.getDataValue('status') === 'CLOSED') {
+            return this.ticketModel.findOne({ where: { id }, include: [{ model: User, as: 'createdBy' }, { model: Department, as: 'targetDepartment' }, { model: Employee, as: 'assignedTo' }] });
+        }
         return this.ticketModel.update(
             { status: 'CLOSED', closedAt: new Date() },
             { where: { id }, returning: true },

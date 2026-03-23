@@ -1,6 +1,7 @@
 
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/sequelize';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { InjectModel, InjectConnection } from '@nestjs/sequelize';
+import { Sequelize } from 'sequelize-typescript';
 import { Demand } from '../models/demand.model';
 import { DemandItem } from '../models/demand-item.model';
 import { Employee } from '../models/employee.model';
@@ -21,6 +22,8 @@ export class DemandsService {
         private employeeModel: typeof Employee,
         @InjectModel(User)
         private userModel: typeof User,
+        @InjectConnection()
+        private sequelize: Sequelize,
         private notificationsService: NotificationsService,
         private expensesService: ExpensesService,
     ) { }
@@ -32,38 +35,41 @@ export class DemandsService {
         const items: { name: string; quantity: number; unitPrice: number; imageUrl?: string }[] = createDemandDto.items || [];
         const totalPrice = items.reduce((sum, item) => sum + (item.quantity || 1) * (item.unitPrice || 0), 0);
 
-        const demand = await this.demandModel.create({
-            proformaUrl: createDemandDto.proformaUrl || null,
-            importance: createDemandDto.importance || 'IMPORTANT',
-            totalPrice,
-            employeeId: employee.getDataValue('id'),
-            departmentId: employee.getDataValue('departmentId'),
-            status: 'PENDING',
+        const demand = await this.sequelize.transaction(async (t) => {
+            const d = await this.demandModel.create({
+                proformaUrl: createDemandDto.proformaUrl || null,
+                importance: createDemandDto.importance || 'IMPORTANT',
+                totalPrice,
+                employeeId: employee.getDataValue('id'),
+                departmentId: employee.getDataValue('departmentId'),
+                status: 'PENDING',
+            }, { transaction: t });
+
+            if (items.length > 0) {
+                await this.demandItemModel.bulkCreate(
+                    items.map(item => ({
+                        demandId: d.getDataValue('id'),
+                        name: item.name,
+                        quantity: item.quantity || 1,
+                        unitPrice: item.unitPrice || 0,
+                        imageUrl: item.imageUrl || null,
+                    })),
+                    { transaction: t },
+                );
+            }
+            return d;
         });
 
-        if (items.length > 0) {
-            await this.demandItemModel.bulkCreate(
-                items.map(item => ({
-                    demandId: demand.getDataValue('id'),
-                    name: item.name,
-                    quantity: item.quantity || 1,
-                    unitPrice: item.unitPrice || 0,
-                    imageUrl: item.imageUrl || null,
-                })),
-            );
-        }
-
-        // Notify all managers about the new demand
+        // Notify managers after commit
         const employeeName = `${employee.getDataValue('firstName')} ${employee.getDataValue('lastName')}`.trim();
-        const managers = await this.userModel.findAll({
-            where: { role: 'MANAGER' },
-            attributes: ['id'],
-        });
+        const managers = await this.userModel.findAll({ where: { role: 'MANAGER' }, attributes: ['id'] });
         if (managers.length > 0) {
             await this.notificationsService.createMany(
                 managers.map(m => ({
                     title: 'New demand submitted',
                     body: `${employeeName} submitted a demand for ${new Intl.NumberFormat('fr-FR').format(totalPrice)} FCFA`,
+                    titleFr: 'Nouvelle demande soumise',
+                    bodyFr: `${employeeName} a soumis une demande de ${new Intl.NumberFormat('fr-FR').format(totalPrice)} FCFA`,
                     type: 'demand',
                     userId: m.getDataValue('id'),
                 })),
@@ -145,6 +151,12 @@ export class DemandsService {
 
     async validate(id: string) {
         const demand = await this.findOne(id);
+        const status = demand.getDataValue('status');
+        // Idempotent: already validated
+        if (status === 'VALIDATED') return demand;
+        if (status !== 'PENDING') {
+            throw new BadRequestException('Only PENDING demands can be validated');
+        }
 
         await this.demandModel.update(
             { status: 'VALIDATED', validatedAt: new Date() },
@@ -156,6 +168,8 @@ export class DemandsService {
             await this.notificationsService.createMany([{
                 title: 'Demand validated',
                 body: `Your demand has been validated.`,
+                titleFr: 'Demande validée',
+                bodyFr: `Votre demande a été validée.`,
                 type: 'demand',
                 userId: employee.userId,
             }]);
@@ -177,9 +191,15 @@ export class DemandsService {
 
     async reject(id: string, reason?: string) {
         const demand = await this.findOne(id);
+        const status = demand.getDataValue('status');
+        // Idempotent: already rejected
+        if (status === 'REJECTED') return demand;
+        if (status !== 'PENDING') {
+            throw new BadRequestException('Only PENDING demands can be rejected');
+        }
 
         await this.demandModel.update(
-            { status: 'REJECTED', rejectionReason: reason || '' },
+            { status: 'REJECTED', rejectionReason: reason || null },
             { where: { id } },
         );
 
@@ -188,6 +208,8 @@ export class DemandsService {
             await this.notificationsService.createMany([{
                 title: 'Demand rejected',
                 body: `Your demand has been rejected.${reason ? ` Reason: ${reason}` : ''}`,
+                titleFr: 'Demande rejetée',
+                bodyFr: `Votre demande a été rejetée.${reason ? ` Raison : ${reason}` : ''}`,
                 type: 'demand',
                 userId: employee.userId,
             }]);

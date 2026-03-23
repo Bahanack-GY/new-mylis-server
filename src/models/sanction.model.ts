@@ -3,7 +3,12 @@ import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from 'sequelize
 import { Employee } from './employee.model';
 import { User } from './user.model';
 
-@Table
+@Table({
+    indexes: [
+        { fields: ['employeeId'] },
+        { fields: ['employeeId', 'type'] },
+    ],
+})
 export class Sanction extends Model {
     @Column({
         type: DataType.UUID,

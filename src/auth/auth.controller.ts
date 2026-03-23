@@ -3,21 +3,25 @@ import { Controller, Request, Post, UseGuards, Body, Get, Patch, BadRequestExcep
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
+import { RolesGuard } from './roles.guard';
+import { Roles } from './roles.decorator';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('auth')
 export class AuthController {
     constructor(private authService: AuthService, private usersService: UsersService) { }
 
+    @Throttle({ default: { ttl: 60000, limit: 10 } })
     @UseGuards(AuthGuard('local'))
     @Post('login')
     async login(@Request() req) {
         return this.authService.login(req.user);
     }
 
+    @UseGuards(AuthGuard('jwt'), RolesGuard)
+    @Roles('MANAGER')
     @Post('register')
     async register(@Body() registerDto: any) {
-        // SECURITY: In a real app, registration should be protected or only for first user
-        // For this prototype, we allow it to seed the initial manager
         return this.authService.register(registerDto);
     }
 

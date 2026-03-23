@@ -31,6 +31,11 @@ export class InvoicesController {
         return this.invoicesService.getStats(deptId, from, to);
     }
 
+    @Get('revenue-by-department')
+    getRevenueByDepartment(@Query('from') from: string, @Query('to') to: string) {
+        return this.invoicesService.getRevenueByDepartment(from, to);
+    }
+
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.invoicesService.findOne(id);

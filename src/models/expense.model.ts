@@ -2,7 +2,15 @@ import { Column, DataType, Model, Table, ForeignKey, BelongsTo } from 'sequelize
 import { Demand } from './demand.model';
 import { Project } from './project.model';
 
-@Table({ tableName: 'expenses' })
+@Table({
+    tableName: 'expenses',
+    indexes: [
+        { fields: ['category'] },
+        { fields: ['date'] },
+        { fields: ['category', 'date'] },
+        { fields: ['demandId'] },
+    ],
+})
 export class Expense extends Model {
     @Column({
         type: DataType.UUID,

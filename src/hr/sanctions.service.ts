@@ -23,6 +23,7 @@ export class SanctionsService {
         const employee = await this.employeeModel.findByPk(createSanctionDto.employeeId);
         if (employee) {
             const userId = employee.getDataValue('userId');
+            if (!userId) return sanction;
             const sanctionType = sanction.getDataValue('type');
             const reason = sanction.getDataValue('reason') || '';
             const TYPE_LABELS: Record<string, string> = {
@@ -31,11 +32,20 @@ export class SanctionsService {
                 MISE_A_PIED: 'Suspension',
                 LICENCIEMENT: 'Termination',
             };
+            const TYPE_LABELS_FR: Record<string, string> = {
+                AVERTISSEMENT: 'Avertissement',
+                BLAME: 'Blâme',
+                MISE_A_PIED: 'Mise à pied',
+                LICENCIEMENT: 'Licenciement',
+            };
             const label = TYPE_LABELS[sanctionType] || sanctionType;
+            const labelFr = TYPE_LABELS_FR[sanctionType] || sanctionType;
 
             await this.notificationsService.create({
                 title: `New sanction: ${label}`,
                 body: reason ? `You have received a sanction (${label}): ${reason}` : `You have received a sanction: ${label}.`,
+                titleFr: `Nouvelle sanction : ${labelFr}`,
+                bodyFr: reason ? `Vous avez reçu une sanction (${labelFr}) : ${reason}` : `Vous avez reçu une sanction : ${labelFr}.`,
                 type: 'sanction',
                 userId,
             });

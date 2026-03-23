@@ -7,7 +7,7 @@ import { Roles } from '../auth/roles.decorator';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/roles.guard';
 
-@Roles('MANAGER', 'HEAD_OF_DEPARTMENT')
+@Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'ACCOUNTANT')
 @Controller('projects')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class ProjectsController {
@@ -22,9 +22,12 @@ export class ProjectsController {
         return this.projectsService.create(createProjectDto);
     }
 
-    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'EMPLOYEE')
+    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'EMPLOYEE', 'ACCOUNTANT')
     @Get('my-projects')
     async findMyProjects(@Request() req) {
+        if (req.user.role === 'MANAGER' || req.user.role === 'ACCOUNTANT') {
+            return this.projectsService.findAll();
+        }
         const employee = await this.employeeModel.findOne({ where: { userId: req.user.userId } });
         const deptId = employee?.getDataValue('departmentId');
         if (!deptId) return [];

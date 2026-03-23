@@ -4,7 +4,14 @@ import { User } from './user.model';
 import { Department } from './department.model';
 import { Employee } from './employee.model';
 
-@Table
+@Table({
+    indexes: [
+        { fields: ['status'] },
+        { fields: ['targetDepartmentId'] },
+        { fields: ['createdById'] },
+        { fields: ['assignedToId'] },
+    ],
+})
 export class Ticket extends Model {
     @Column({
         type: DataType.UUID,

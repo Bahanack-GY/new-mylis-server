@@ -4,7 +4,14 @@ import { Employee } from './employee.model';
 import { Department } from './department.model';
 import { DemandItem } from './demand-item.model';
 
-@Table
+@Table({
+    indexes: [
+        { fields: ['employeeId'] },
+        { fields: ['departmentId'] },
+        { fields: ['status'] },
+        { fields: ['departmentId', 'status'] },
+    ],
+})
 export class Demand extends Model {
     @Column({
         type: DataType.UUID,

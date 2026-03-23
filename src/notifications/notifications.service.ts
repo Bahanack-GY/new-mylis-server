@@ -24,21 +24,21 @@ export class NotificationsService {
         this.pushCallback = cb;
     }
 
-    async create(data: { title: string; body: string; type: string; userId: string; meta?: Record<string, unknown> }) {
+    async create(data: { title: string; body: string; titleFr?: string; bodyFr?: string; type: string; userId: string; meta?: Record<string, unknown> }) {
         const notif = await this.notificationModel.create(data);
         this.pushCallback?.(data.userId, { title: data.title, body: data.body, type: data.type });
 
         // Send email asynchronously (non-blocking)
         this.userModel.findByPk(data.userId).then(user => {
             if (user?.email) {
-                this.mailService.sendNotification(user.email, data.title, data.body);
+                this.mailService.sendNotification(user.email, data.title, data.body, data.titleFr, data.bodyFr);
             }
         });
 
         return notif;
     }
 
-    async createMany(notifications: { title: string; body: string; type: string; userId: string; meta?: Record<string, unknown> }[]) {
+    async createMany(notifications: { title: string; body: string; titleFr?: string; bodyFr?: string; type: string; userId: string; meta?: Record<string, unknown> }[]) {
         const result = await this.notificationModel.bulkCreate(notifications);
 
         for (const n of notifications) {
@@ -52,7 +52,7 @@ export class NotificationsService {
             for (const n of notifications) {
                 const email = emailByUserId[n.userId];
                 if (email) {
-                    this.mailService.sendNotification(email, n.title, n.body);
+                    this.mailService.sendNotification(email, n.title, n.body, n.titleFr, n.bodyFr);
                 }
             }
         });
@@ -60,10 +60,11 @@ export class NotificationsService {
         return result;
     }
 
-    async findForUser(userId: string) {
+    async findForUser(userId: string, limit = 50) {
         return this.notificationModel.findAll({
             where: { userId },
             order: [['createdAt', 'DESC']],
+            limit,
         });
     }
 

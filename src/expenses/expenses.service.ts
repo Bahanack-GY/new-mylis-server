@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Expense } from '../models/expense.model';
-import { Employee } from '../models/employee.model';
 import { Project } from '../models/project.model';
 import { Op } from 'sequelize';
 
@@ -10,8 +9,6 @@ export class ExpensesService {
     constructor(
         @InjectModel(Expense)
         private expenseModel: typeof Expense,
-        @InjectModel(Employee)
-        private employeeModel: typeof Employee,
         @InjectModel(Project)
         private projectModel: typeof Project,
     ) { }
@@ -69,13 +66,9 @@ export class ExpensesService {
             },
         });
 
-        // Sum of active employee salaries
-        const activeEmployees = await this.employeeModel.findAll({
-            where: { dismissed: false },
-            attributes: ['salary'],
-            raw: true,
-        });
-        const totalSalaries = activeEmployees.reduce((sum, emp) => sum + (Number(emp.salary) || 0), 0);
+        // Sum of salary expenses that were actually paid (category = 'Salaire') in this year
+        const salaryExpenses = expenses.filter(e => e.category === 'Salaire');
+        const totalSalaries = salaryExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
 
         // Projects that overlap with the selected year
         const projects = await this.projectModel.findAll({
@@ -116,7 +109,6 @@ export class ExpensesService {
         // Build monthly breakdown with per-category columns
         const byMonth: Record<string, any>[] = Array.from({ length: 12 }, (_, i) => ({
             name: new Date(2000, i, 1).toLocaleString('fr-FR', { month: 'short' }),
-            Salaires: totalSalaries,
             Projets: Math.round(projectByMonth[i]),
             total: 0,
         }));

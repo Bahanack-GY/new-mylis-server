@@ -1,6 +1,6 @@
 
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/sequelize';
+import { InjectModel, InjectConnection } from '@nestjs/sequelize';
 import { Employee } from '../models/employee.model';
 import { EmployeeBadge } from '../models/employee-badge.model';
 import { User } from '../models/user.model';
@@ -10,6 +10,7 @@ import { Task } from '../models/task.model';
 import { UsersService } from '../users/users.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Op, literal } from 'sequelize';
+import { Sequelize } from 'sequelize-typescript';
 
 @Injectable()
 export class EmployeesService {
@@ -20,6 +21,8 @@ export class EmployeesService {
         private employeeBadgeModel: typeof EmployeeBadge,
         @InjectModel(Task)
         private taskModel: typeof Task,
+        @InjectConnection()
+        private sequelize: Sequelize,
         private usersService: UsersService,
         private notificationsService: NotificationsService,
     ) { }
@@ -40,34 +43,30 @@ export class EmployeesService {
     }
 
     async create(createEmployeeDto: any): Promise<Employee> {
-        // 1. Create User
-        let user;
-        try {
-            // Check if user exists
-            user = await this.usersService.findOne(createEmployeeDto.email);
-        } catch (e) {
-            // User likely not found, proceed to create
-        }
+        // Hash password before transaction to avoid holding lock during slow bcrypt
+        let existingUser = await this.usersService.findOne(createEmployeeDto.email);
 
-        if (!user) {
-            // Create new user with provided or default password
-            const password = createEmployeeDto.password || 'ChangeMe123!';
-            user = await this.usersService.create({
-                email: createEmployeeDto.email,
-                password: password,
-                role: createEmployeeDto.userRole || 'EMPLOYEE',
-                firstName: createEmployeeDto.firstName,
-                lastName: createEmployeeDto.lastName
-            });
-        }
+        // 1 & 2: Create User + Employee atomically
+        const employee = await this.sequelize.transaction(async (t) => {
+            let user = existingUser;
+            if (!user) {
+                const password = createEmployeeDto.password || 'ChangeMe123!';
+                user = await this.usersService.create({
+                    email: createEmployeeDto.email,
+                    password,
+                    role: createEmployeeDto.userRole || 'EMPLOYEE',
+                    firstName: createEmployeeDto.firstName,
+                    lastName: createEmployeeDto.lastName,
+                }, { transaction: t });
+            }
 
-        // 2. Create Employee linked to User
-        const employee = await this.employeeModel.create({
-            ...createEmployeeDto,
-            userId: user.id
+            return this.employeeModel.create({
+                ...createEmployeeDto,
+                userId: user.id,
+            }, { transaction: t });
         });
 
-        // 3. Notify department members about new colleague
+        // 3. Notify department members after commit
         if (createEmployeeDto.departmentId) {
             const colleagues = await this.employeeModel.findAll({
                 where: {
@@ -83,6 +82,8 @@ export class EmployeesService {
                 .map(c => ({
                     title: 'New team member',
                     body: `${empName} has joined your department`,
+                    titleFr: 'Nouveau membre de l\'équipe',
+                    bodyFr: `${empName} a rejoint votre département`,
                     type: 'system' as const,
                     userId: c.userId,
                 }));

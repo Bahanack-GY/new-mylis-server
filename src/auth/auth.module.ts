@@ -22,7 +22,7 @@ import { EmployeeBadge } from '../models/employee-badge.model';
         JwtModule.registerAsync({
             imports: [ConfigModule],
             useFactory: async (configService: ConfigService) => ({
-                secret: configService.get<string>('JWT_SECRET') || 'secretKey',
+                secret: configService.get<string>('JWT_SECRET'),
                 signOptions: { expiresIn: '60m' },
             }),
             inject: [ConfigService],

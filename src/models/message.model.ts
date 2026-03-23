@@ -2,7 +2,13 @@ import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from 'sequelize
 import { Channel } from './channel.model';
 import { User } from './user.model';
 
-@Table
+@Table({
+    indexes: [
+        { fields: ['channelId'] },
+        { fields: ['channelId', 'createdAt'] },
+        { fields: ['senderId'] },
+    ],
+})
 export class Message extends Model {
     @Column({
         type: DataType.UUID,

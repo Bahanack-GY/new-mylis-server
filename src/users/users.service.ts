@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { User } from '../models/user.model';
 import { Employee } from '../models/employee.model';
+import { Transaction } from 'sequelize';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -43,13 +44,13 @@ export class UsersService {
         return bcrypt.compare(password, user.passwordHash);
     }
 
-    async create(userData: { email: string; password: string; role?: string; firstName?: string; lastName?: string }): Promise<User> {
+    async create(userData: { email: string; password: string; role?: string; firstName?: string; lastName?: string }, options?: { transaction?: Transaction }): Promise<User> {
         const salt = await bcrypt.genSalt();
         const passwordHash = await bcrypt.hash(userData.password, salt);
         return this.userModel.create({
             email: userData.email,
             passwordHash,
             role: userData.role || 'EMPLOYEE',
-        });
+        }, options);
     }
 }

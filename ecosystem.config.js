@@ -4,8 +4,8 @@ module.exports = {
       name: 'mylisapp-api',
       script: './dist/main.js',
       cwd: '/var/www/api.mylisapp.online',
-      instances: 'max', // Will use all 8 CPU cores
-      exec_mode: 'cluster',
+      instances: 1,
+      exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
         PORT: 3085,
@@ -15,6 +15,10 @@ module.exports = {
         DB_PASSWORD: 'postgres',
         DB_DATABASE: 'mylisapp_db',
         JWT_SECRET: 'mylisapp_secured_app_secret',
+        SMTP_HOST: 'ssl0.ovh.net',
+        SMTP_PORT: '465',
+        SMTP_USER: 'mychurch@lis.cm',
+        SMTP_PASS: 'L1sm0negli5e',
       },
       // Advanced PM2 settings for production
       autorestart: true,

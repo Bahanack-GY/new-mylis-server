@@ -243,36 +243,71 @@ export class ChatService implements OnModuleInit {
     const channelIds = memberships.map((m) => m.channelId);
     if (channelIds.length === 0) return [];
 
+    const membershipMap = new Map(memberships.map((m) => [m.channelId, m]));
+
     const channels = await this.channelModel.findAll({
       where: { id: { [Op.in]: channelIds } },
       include: [{ model: Department, attributes: ['id', 'name'] }],
       order: [['updatedAt', 'DESC']],
     });
 
-    // Build result with unread counts and last message
-    const result: any[] = [];
-    for (const channel of channels) {
-      const membership = memberships.find((m) => m.channelId === channel.id);
-      const lastReadAt = membership?.lastReadAt;
+    const directChannelIds = channels.filter((c) => c.type === 'DIRECT').map((c) => c.id);
 
-      // Unread count
-      const whereUnread: any = { channelId: channel.id };
-      if (lastReadAt) {
-        whereUnread.createdAt = { [Op.gt]: lastReadAt };
-      }
-      const unreadCount = lastReadAt
-        ? await this.messageModel.count({ where: whereUnread })
-        : await this.messageModel.count({ where: { channelId: channel.id } });
+    // Fire all per-channel queries in parallel
+    const [lastMessagesResults, unreadCountsResults, dmMembershipsResults] =
+      await Promise.all([
+        Promise.all(
+          channelIds.map((channelId) =>
+            this.messageModel
+              .findOne({
+                where: { channelId },
+                order: [['createdAt', 'DESC']],
+                attributes: ['id', 'content', 'createdAt', 'senderId'],
+              })
+              .then((msg) => ({ channelId, msg })),
+          ),
+        ),
+        Promise.all(
+          memberships.map((m) => {
+            const where: any = { channelId: m.channelId };
+            if (m.lastReadAt) where.createdAt = { [Op.gt]: m.lastReadAt };
+            return this.messageModel
+              .count({ where })
+              .then((count) => ({ channelId: m.channelId, count }));
+          }),
+        ),
+        Promise.all(
+          directChannelIds.map((channelId) =>
+            this.channelMemberModel
+              .findOne({
+                where: { channelId, userId: { [Op.ne]: userId } },
+                attributes: ['channelId', 'userId'],
+              })
+              .then((membership) => ({ channelId, membership })),
+          ),
+        ),
+      ]);
 
-      // Last message
-      const lastMessage = await this.messageModel.findOne({
-        where: { channelId: channel.id },
-        order: [['createdAt', 'DESC']],
-      });
+    const lastMessageMap = new Map(lastMessagesResults.map((r) => [r.channelId, r.msg]));
+    const unreadCountMap = new Map(unreadCountsResults.map((r) => [r.channelId, r.count]));
+    const dmMembershipMap = new Map(dmMembershipsResults.map((r) => [r.channelId, r.membership]));
+
+    // Batch all employee lookups into a single query
+    const allUserIds = new Set<string>();
+    for (const { msg } of lastMessagesResults) {
+      if (msg) allUserIds.add(msg.senderId);
+    }
+    for (const { membership } of dmMembershipsResults) {
+      if (membership) allUserIds.add(membership.userId);
+    }
+    const empMap = await this.getEmployeeMap([...allUserIds]);
+
+    const result: any[] = channels.map((channel) => {
+      const lastMessage = lastMessageMap.get(channel.id);
+      const unreadCount = unreadCountMap.get(channel.id) ?? 0;
 
       let lastMessageInfo: any = null;
       if (lastMessage) {
-        const empMap = await this.getEmployeeMap([lastMessage.senderId]);
         const emp = empMap.get(lastMessage.senderId);
         const info = this.empToInfo(emp);
         lastMessageInfo = {
@@ -282,24 +317,17 @@ export class ChatService implements OnModuleInit {
         };
       }
 
-      // For DM channels, get the other user's info
       let dmUser: any = null;
       if (channel.type === 'DIRECT') {
-        const otherMembership = await this.channelMemberModel.findOne({
-          where: { channelId: channel.id, userId: { [Op.ne]: userId } },
-        });
+        const otherMembership = dmMembershipMap.get(channel.id);
         if (otherMembership) {
-          const empMap = await this.getEmployeeMap([otherMembership.userId]);
           const emp = empMap.get(otherMembership.userId);
           const info = this.empToInfo(emp);
-          dmUser = {
-            userId: otherMembership.userId,
-            ...info,
-          };
+          dmUser = { userId: otherMembership.userId, ...info };
         }
       }
 
-      result.push({
+      return {
         id: channel.id,
         name:
           channel.type === 'DIRECT' && dmUser
@@ -311,10 +339,9 @@ export class ChatService implements OnModuleInit {
         unreadCount,
         dmUser,
         lastMessage: lastMessageInfo,
-      });
-    }
+      };
+    });
 
-    // Sort: channels with latest messages first
     result.sort((a, b) => {
       const aTime = a.lastMessage?.createdAt
         ? new Date(a.lastMessage.createdAt).getTime()
@@ -404,20 +431,24 @@ export class ChatService implements OnModuleInit {
       | { fileName: string; filePath: string; fileType: string; size: number }[]
       | null,
   ) {
-    const message = await this.messageModel.create({
-      channelId,
-      senderId,
-      content,
-      replyToId: replyToId || null,
-      mentions: mentions && mentions.length > 0 ? mentions : null,
-      attachments: attachments && attachments.length > 0 ? attachments : null,
-    });
+    const message = await this.sequelize.transaction(async (t) => {
+      const msg = await this.messageModel.create({
+        channelId,
+        senderId,
+        content,
+        replyToId: replyToId || null,
+        mentions: mentions && mentions.length > 0 ? mentions : null,
+        attachments: attachments && attachments.length > 0 ? attachments : null,
+      }, { transaction: t });
 
-    // Update channel's updatedAt
-    await this.channelModel.update(
-      { updatedAt: new Date() },
-      { where: { id: channelId } },
-    );
+      // Update channel's updatedAt atomically with message creation
+      await this.channelModel.update(
+        { updatedAt: new Date() },
+        { where: { id: channelId }, transaction: t },
+      );
+
+      return msg;
+    });
 
     // Fetch sender employee info
     const empMap = await this.getEmployeeMap([senderId]);
@@ -497,17 +528,21 @@ export class ChatService implements OnModuleInit {
       }
     }
 
-    // Create new DM channel
-    const channel = await this.channelModel.create({
-      name: `DM`,
-      type: 'DIRECT',
-      createdById: userId,
-    });
+    // Create new DM channel atomically
+    const channel = await this.sequelize.transaction(async (t) => {
+      const ch = await this.channelModel.create({
+        name: `DM`,
+        type: 'DIRECT',
+        createdById: userId,
+      }, { transaction: t });
 
-    await this.channelMemberModel.bulkCreate([
-      { channelId: channel.id, userId },
-      { channelId: channel.id, userId: targetUserId },
-    ]);
+      await this.channelMemberModel.bulkCreate([
+        { channelId: ch.id, userId },
+        { channelId: ch.id, userId: targetUserId },
+      ], { transaction: t });
+
+      return ch;
+    });
 
     return { channel, created: true };
   }

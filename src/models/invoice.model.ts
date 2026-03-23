@@ -5,7 +5,15 @@ import { Client } from './client.model';
 import { User } from './user.model';
 import { InvoiceItem } from './invoice-item.model';
 
-@Table
+@Table({
+    indexes: [
+        { fields: ['status'] },
+        { fields: ['departmentId'] },
+        { fields: ['departmentId', 'status'] },
+        { fields: ['clientId'] },
+        { fields: ['invoiceNumber'] },
+    ],
+})
 export class Invoice extends Model {
     @Column({
         type: DataType.UUID,

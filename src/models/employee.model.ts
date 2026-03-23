@@ -14,7 +14,14 @@ import { ProjectMember } from './project-member.model';
 import { EmployeeBadge } from './employee-badge.model';
 import { BelongsToMany } from 'sequelize-typescript';
 
-@Table
+@Table({
+    indexes: [
+        { unique: true, fields: ['userId'] },
+        { fields: ['departmentId'] },
+        { fields: ['dismissed'] },
+        { fields: ['points'] },
+    ],
+})
 export class Employee extends Model {
     @Column({
         type: DataType.UUID,

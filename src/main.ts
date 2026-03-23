@@ -25,9 +25,9 @@ async function bootstrap() {
     }),
   });
 
-  // Increase body size limit for base64 image uploads
-  app.useBodyParser('json', { limit: '5gb' });
-  app.useBodyParser('urlencoded', { limit: '5gb', extended: true });
+  // JSON limit for normal API payloads; file uploads use multipart (no body parser needed)
+  app.useBodyParser('json', { limit: '10mb' });
+  app.useBodyParser('urlencoded', { limit: '10mb', extended: true });
 
   app.enableCors({
     origin: true,

@@ -2,7 +2,11 @@
 import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from 'sequelize-typescript';
 import { Employee } from './employee.model';
 
-@Table
+@Table({
+    indexes: [
+        { fields: ['employeeId'] },
+    ],
+})
 export class Formation extends Model {
     @Column({
         type: DataType.UUID,

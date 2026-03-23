@@ -4,7 +4,16 @@ import { Employee } from './employee.model';
 import { Team } from './team.model';
 import { Project } from './project.model';
 
-@Table
+@Table({
+    indexes: [
+        { fields: ['assignedToId'] },
+        { fields: ['assignedToId', 'state'] },
+        { fields: ['assignedToId', 'state', 'completedAt'] },
+        { fields: ['projectId'] },
+        { fields: ['ticketId'] },
+        { fields: ['state'] },
+    ],
+})
 export class Task extends Model {
     @Column({
         type: DataType.UUID,

@@ -1,7 +1,11 @@
 import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from 'sequelize-typescript';
 import { Task } from './task.model';
 
-@Table
+@Table({
+    indexes: [
+        { fields: ['taskId'] },
+    ],
+})
 export class TaskHistory extends Model {
     @Column({ type: DataType.UUID, defaultValue: DataType.UUIDV4, primaryKey: true })
     declare id: string;

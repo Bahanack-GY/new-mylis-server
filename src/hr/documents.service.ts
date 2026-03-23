@@ -5,7 +5,7 @@ import { Document } from '../models/document.model';
 import { User } from '../models/user.model';
 import { Employee } from '../models/employee.model';
 import { join } from 'path';
-import { readdirSync, statSync } from 'fs';
+import { readdirSync, statSync, unlink } from 'fs';
 import { Op } from 'sequelize';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -60,6 +60,8 @@ export class DocumentsService {
                 await this.notificationsService.create({
                     title: 'New document',
                     body: `A new document "${createDocumentDto.name || 'Untitled'}" has been added to your file`,
+                    titleFr: 'Nouveau document',
+                    bodyFr: `Un nouveau document "${createDocumentDto.name || 'Sans titre'}" a été ajouté à votre dossier`,
                     type: 'document',
                     userId: targetEmployee.userId,
                 });
@@ -91,7 +93,15 @@ export class DocumentsService {
     async remove(id: string) {
         const doc = await this.documentModel.findByPk(id);
         if (!doc) return null;
+        const filePath: string | null = doc.getDataValue('filePath') || doc.getDataValue('url') || null;
         await doc.destroy();
+        // Delete physical file from disk (non-blocking, ignore errors)
+        if (filePath) {
+            const absPath = filePath.startsWith('/uploads/')
+                ? join(process.cwd(), filePath)
+                : filePath;
+            unlink(absPath, () => { /* ignore */ });
+        }
         return { success: true };
     }
 
@@ -109,13 +119,13 @@ export class DocumentsService {
     async findByDepartment(departmentId: string) {
         const employees = await this.employeeModel.findAll({
             where: { departmentId },
-            attributes: ['userId'],
+            attributes: ['id'],
         });
-        const userIds = employees.map(e => e.getDataValue('userId'));
-        if (userIds.length === 0) return [];
+        const employeeIds = employees.map(e => e.getDataValue('id'));
+        if (employeeIds.length === 0) return [];
 
         return this.documentModel.findAll({
-            where: { uploadedById: { [Op.in]: userIds } },
+            where: { employeeId: { [Op.in]: employeeIds } },
             include: [
                 { model: User, as: 'uploadedBy', attributes: ['id', 'email'] },
                 { model: Employee, as: 'employee', attributes: ['id', 'firstName', 'lastName'] },

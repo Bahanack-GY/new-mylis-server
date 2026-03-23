@@ -13,7 +13,10 @@ export class EmployeesController {
     constructor(private readonly employeesService: EmployeesService) { }
 
     @Post()
-    create(@Body() createEmployeeDto: any) {
+    create(@Body() createEmployeeDto: any, @Request() req) {
+        if (req.user.role === 'HEAD_OF_DEPARTMENT') {
+            createEmployeeDto.departmentId = req.user.departmentId;
+        }
         return this.employeesService.create(createEmployeeDto);
     }
 
@@ -24,13 +27,13 @@ export class EmployeesController {
         return this.employeesService.findAll(deptId);
     }
 
-    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'EMPLOYEE')
+    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'EMPLOYEE', 'ACCOUNTANT')
     @Get('leaderboard')
     getLeaderboard(@Query('limit') limit?: string) {
         return this.employeesService.getLeaderboard(limit ? parseInt(limit, 10) : 5);
     }
 
-    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'EMPLOYEE')
+    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'EMPLOYEE', 'ACCOUNTANT')
     @Get('birthdays/today')
     getTodayBirthdays() {
         return this.employeesService.getTodayBirthdays();

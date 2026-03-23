@@ -1,5 +1,5 @@
 
-import { Controller, Get, Patch, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/roles.guard';
@@ -12,8 +12,9 @@ export class NotificationsController {
     constructor(private readonly notificationsService: NotificationsService) { }
 
     @Get()
-    findAll(@Request() req) {
-        return this.notificationsService.findForUser(req.user.userId);
+    findAll(@Request() req, @Query('limit') limit?: string) {
+        const parsedLimit = limit ? Math.min(parseInt(limit, 10) || 50, 200) : 50;
+        return this.notificationsService.findForUser(req.user.userId, parsedLimit);
     }
 
     @Patch('read-all')

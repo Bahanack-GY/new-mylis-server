@@ -6,7 +6,7 @@ import { Roles } from '../auth/roles.decorator';
 
 import { RolesGuard } from '../auth/roles.guard';
 
-@Roles('MANAGER', 'HEAD_OF_DEPARTMENT')
+@Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'ACCOUNTANT')
 @Controller('tasks')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class TasksController {
@@ -23,7 +23,7 @@ export class TasksController {
         return this.tasksService.findAll(deptId, from, to);
     }
 
-    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'EMPLOYEE')
+    @Roles('MANAGER', 'HEAD_OF_DEPARTMENT', 'EMPLOYEE', 'ACCOUNTANT')
     @Get('my-tasks')
     findMyTasks(@Request() req) {
         return this.tasksService.findByUserId(req.user.userId);

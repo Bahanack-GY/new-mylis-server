@@ -54,11 +54,14 @@ export class ProjectsService {
                 where: { departmentId: createProjectDto.departmentId, dismissed: false },
                 include: [User],
             });
+            const _projectName = project.getDataValue('name') || project.getDataValue('title') || 'Untitled';
             const notifications = employees
                 .filter(e => e.userId)
                 .map(e => ({
                     title: 'New project created',
-                    body: `A new project "${project.getDataValue('name') || project.getDataValue('title') || 'Untitled'}" has been created in your department`,
+                    body: `A new project "${_projectName}" has been created in your department`,
+                    titleFr: 'Nouveau projet créé',
+                    bodyFr: `Un nouveau projet "${_projectName}" a été créé dans votre département`,
                     type: 'project',
                     userId: e.userId,
                 }));
@@ -89,6 +92,8 @@ export class ProjectsService {
                         .map(e => ({
                             title: 'Project completed',
                             body: `The project "${projectName}" has been marked as completed`,
+                            titleFr: 'Projet terminé',
+                            bodyFr: `Le projet "${projectName}" a été marqué comme terminé`,
                             type: 'project',
                             userId: e.userId,
                         }));

@@ -99,6 +99,7 @@ export class ChatGateway
 
       this.logger.log(`Client connected: ${userData.email} (${client.id})`);
     } catch {
+      client.emit('connect_error', { message: 'Unauthorized: invalid or expired token' });
       client.disconnect();
     }
   }
@@ -178,12 +179,17 @@ export class ChatGateway
     const notifTitle = isDirect
       ? `New private message from ${senderName}`
       : `New message in ${channel?.name ?? 'a channel'} from ${senderName}`;
+    const notifTitleFr = isDirect
+      ? `Nouveau message privé de ${senderName}`
+      : `Nouveau message dans ${channel?.name ?? 'un canal'} de ${senderName}`;
 
     if (otherMembers.length > 0) {
       await this.notificationsService.createMany(
         otherMembers.map((userId) => ({
           title: notifTitle,
           body: preview || 'Sent an attachment',
+          titleFr: notifTitleFr,
+          bodyFr: preview || 'A envoyé une pièce jointe',
           type: 'message',
           userId,
           meta: { channelId: data.channelId },
@@ -199,6 +205,8 @@ export class ChatGateway
           recipients.map((userId) => ({
             title: `${senderName} mentioned you`,
             body: preview,
+            titleFr: `${senderName} vous a mentionné(e)`,
+            bodyFr: preview,
             type: 'chat',
             userId,
             meta: { channelId: data.channelId },
@@ -285,11 +293,17 @@ export class ChatGateway
   /* ── Channel join (for new DMs) ──────────────────────── */
 
   @SubscribeMessage('channel:join')
-  handleChannelJoin(
+  async handleChannelJoin(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { channelId: string },
   ) {
-    if (!data.channelId) return;
+    const user = client.data.user as SocketUser;
+    if (!user || !data.channelId) return;
+
+    // Only allow joining rooms the user is actually a member of
+    const memberIds = await this.chatService.getChannelMemberUserIds(data.channelId);
+    if (!memberIds.includes(user.userId)) return;
+
     client.join(`channel:${data.channelId}`);
   }
 

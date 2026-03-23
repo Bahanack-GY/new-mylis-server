@@ -2,7 +2,13 @@
 import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from 'sequelize-typescript';
 import { User } from './user.model';
 
-@Table
+@Table({
+    indexes: [
+        { fields: ['userId'] },
+        { fields: ['userId', 'read'] },
+        { fields: ['userId', 'createdAt'] },
+    ],
+})
 export class Notification extends Model {
     @Column({
         type: DataType.UUID,
